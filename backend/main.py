@@ -21,6 +21,7 @@ from .models import (
     AuditVerifyResponse,
     Incident,
     IncidentsListResponse,
+    LiveFrameRequest,
     SessionResponse,
     SessionsListResponse,
     SessionStartRequest,
@@ -450,12 +451,14 @@ async def run_mock_pipeline(session_id: UUID) -> None:
                         "severity": "LOW",
                         "confidence": 0,
                         "subjects_count": 0,
+                        "risk_level": "GREEN",
                         "ai_mode": active_ai_mode,
                         "detection_basis": "waiting_for_video",
                         "observed_signals": [],
                         "trigger_reason": "No hay frame disponible para análisis.",
                         "narrator_caption": "Esperando señal de video...",
                         "source_runtime": "live_stream" if session.request.source.value in {"webcam", "mobile", "rtsp"} else "file_stream",
+                        "device_location": session.device_location.model_dump(mode="json") if session.device_location else None,
                     },
                 }
             )
@@ -489,6 +492,7 @@ async def run_mock_pipeline(session_id: UUID) -> None:
                         "severity": last_analysis["severity"] if last_analysis else "LOW",
                         "confidence": last_analysis["confidence"] if last_analysis else 0,
                         "subjects_count": last_analysis["subjects_count"] if last_analysis else 0,
+                        "risk_level": last_analysis["risk_level"] if last_analysis else "GREEN",
                         "ai_mode": active_ai_mode,
                         "detection_basis": skip_reason,
                         "observed_signals": last_analysis.get("observed_signals", []) if last_analysis else [],
@@ -501,6 +505,7 @@ async def run_mock_pipeline(session_id: UUID) -> None:
                         "input_tokens": (rate_state or {}).get("input_tokens", 0),
                         "output_tokens": (rate_state or {}).get("output_tokens", 0),
                         "total_tokens": (rate_state or {}).get("total_tokens", 0),
+                        "device_location": session.device_location.model_dump(mode="json") if session.device_location else None,
                     },
                 }
             )
@@ -556,6 +561,7 @@ async def run_mock_pipeline(session_id: UUID) -> None:
                     "severity": current_analysis.severity.value,
                     "confidence": current_analysis.confidence,
                     "subjects_count": current_analysis.subjects_count,
+                    "risk_level": current_analysis.risk_level,
                     "ai_mode": active_ai_mode,
                     "detection_basis": detection_basis,
                     "observed_signals": current_analysis.observed_signals,
@@ -568,6 +574,7 @@ async def run_mock_pipeline(session_id: UUID) -> None:
                     "input_tokens": (rate_state or {}).get("input_tokens", 0),
                     "output_tokens": (rate_state or {}).get("output_tokens", 0),
                     "total_tokens": (rate_state or {}).get("total_tokens", 0),
+                    "device_location": session.device_location.model_dump(mode="json") if session.device_location else None,
                 },
             }
         )
@@ -602,6 +609,7 @@ async def run_mock_pipeline(session_id: UUID) -> None:
                     "severity": analysis.severity.value,
                     "confidence": analysis.confidence,
                     "subjects_count": analysis.subjects_count,
+                    "risk_level": analysis.risk_level,
                     "ai_mode": active_ai_mode,
                     "detection_basis": detection_basis,
                     "observed_signals": analysis.observed_signals,
@@ -614,6 +622,7 @@ async def run_mock_pipeline(session_id: UUID) -> None:
                     "input_tokens": (rate_state or {}).get("input_tokens", 0),
                     "output_tokens": (rate_state or {}).get("output_tokens", 0),
                     "total_tokens": (rate_state or {}).get("total_tokens", 0),
+                    "device_location": session.device_location.model_dump(mode="json") if session.device_location else None,
                 },
             }
         )
@@ -709,13 +718,9 @@ async def import_source(payload: dict) -> dict:
 
 
 @app.post("/live/frame")
-async def ingest_live_frame(payload: dict) -> dict:
-    camera_label = payload.get("camera_label")
-    frame_b64 = payload.get("frame_b64")
-    if not camera_label or not frame_b64:
-        raise HTTPException(status_code=400, detail="camera_label and frame_b64 are required")
-    await store.update_live_frame(camera_label, frame_b64)
-    return {"status": "accepted", "camera_label": camera_label}
+async def ingest_live_frame(payload: LiveFrameRequest) -> dict:
+    await store.update_live_frame(payload.camera_label, payload.frame_b64, payload.device_location)
+    return {"status": "accepted", "camera_label": payload.camera_label}
 
 
 @app.post("/sessions/start", response_model=SessionResponse)
@@ -729,6 +734,7 @@ async def start_session(request: SessionStartRequest) -> SessionResponse:
             "status": "ACTIVE",
             "source": request.source.value,
             "source_path": request.source_path,
+            "device_location": request.device_location.model_dump(mode="json") if request.device_location else None,
         }
     )
     return SessionResponse(
@@ -751,6 +757,7 @@ async def stop_session(session_id: UUID) -> SessionStopResponse:
             "status": "STOPPED",
             "source": session.request.source.value,
             "source_path": session.request.source_path,
+            "device_location": session.device_location.model_dump(mode="json") if session.device_location else None,
         }
     )
     return SessionStopResponse(
@@ -782,6 +789,7 @@ async def list_sessions() -> SessionsListResponse:
                 input_tokens=session.input_tokens,
                 output_tokens=session.output_tokens,
                 total_tokens=session.total_tokens,
+                device_location=session.device_location,
             )
             for session in sessions
         ]

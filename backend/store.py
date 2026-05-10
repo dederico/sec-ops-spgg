@@ -28,6 +28,7 @@ class SessionState:
     input_tokens: int = 0
     output_tokens: int = 0
     total_tokens: int = 0
+    device_location: object | None = None
     task: asyncio.Task | None = None
 
 
@@ -44,6 +45,7 @@ class InMemoryStore:
             session_id=uuid4(),
             request=request,
             started_at=datetime.now(UTC),
+            device_location=request.device_location,
         )
         async with self._lock:
             for existing in self.sessions.values():
@@ -86,9 +88,14 @@ class InMemoryStore:
                     return incident
         return None
 
-    async def update_live_frame(self, camera_label: str, frame_b64: str) -> None:
+    async def update_live_frame(self, camera_label: str, frame_b64: str, device_location: object | None = None) -> None:
         async with self._lock:
             self.live_frames[camera_label] = frame_b64
+            if device_location is not None:
+                for session in self.sessions.values():
+                    if session.request.camera_label == camera_label:
+                        session.device_location = device_location
+                        session.request.device_location = device_location
 
     async def get_live_frame(self, camera_label: str) -> str | None:
         async with self._lock:
@@ -105,6 +112,9 @@ class InMemoryStore:
                 timestamp=datetime.now(UTC),
                 source_id=session.request.camera_label,
                 incident_type=analysis.incident_type,
+                incident_family=analysis.incident_family,
+                scenario_label=analysis.scenario_label,
+                dispatch_target=analysis.dispatch_target,
                 severity=analysis.severity,
                 confidence=analysis.confidence,
                 description=analysis.description,
@@ -118,6 +128,8 @@ class InMemoryStore:
                 observed_signals=analysis.observed_signals,
                 trigger_reason=analysis.trigger_reason,
                 scene_summary=self._build_scene_summary(session),
+                risk_level=analysis.risk_level,
+                device_location=session.device_location,
                 frame_b64=self.live_frames.get(session.request.camera_label)
                 or build_mock_frame(
                     session.request,
@@ -149,7 +161,12 @@ class InMemoryStore:
                     "description": analysis.description,
                     "signals": analysis.observed_signals,
                     "incident_type": analysis.incident_type.value,
+                    "incident_family": analysis.incident_family.value,
+                    "scenario_label": analysis.scenario_label,
+                    "dispatch_target": analysis.dispatch_target,
                     "has_incident": analysis.has_incident,
+                    "risk_level": analysis.risk_level,
+                    "recommended_action": analysis.recommended_action,
                     "ai_mode": ai_mode,
                     "detection_basis": detection_basis,
                 }

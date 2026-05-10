@@ -15,7 +15,19 @@ class IncidentType(str, Enum):
     FIGHT = "FIGHT"
     VEHICLE_RESTRICTED = "VEHICLE_RESTRICTED"
     CROWD = "CROWD"
+    ANIMAL_RISK = "ANIMAL_RISK"
     NORMAL = "NORMAL"
+
+
+class IncidentFamily(str, Enum):
+    PUBLIC_SAFETY = "PUBLIC_SAFETY"
+    MEDICAL = "MEDICAL"
+    SECURITY = "SECURITY"
+    TRAFFIC = "TRAFFIC"
+    ANIMAL = "ANIMAL"
+    CROWD = "CROWD"
+    NORMAL = "NORMAL"
+    OTHER = "OTHER"
 
 
 class Severity(str, Enum):
@@ -32,9 +44,26 @@ class SourceType(str, Enum):
     RTSP = "rtsp"
 
 
+class RiskLevel(str, Enum):
+    GREEN = "GREEN"
+    YELLOW = "YELLOW"
+    RED = "RED"
+
+
+class DeviceLocation(BaseModel):
+    latitude: float
+    longitude: float
+    accuracy_meters: float | None = None
+    shared_at: datetime | None = None
+    label: str | None = None
+
+
 class AnalysisResult(BaseModel):
     has_incident: bool
     incident_type: IncidentType
+    incident_family: IncidentFamily = IncidentFamily.NORMAL
+    scenario_label: str = "NORMAL"
+    dispatch_target: str = "MONITOREO"
     confidence: float = Field(ge=0.0, le=1.0)
     severity: Severity
     description: str
@@ -44,6 +73,7 @@ class AnalysisResult(BaseModel):
     observed_signals: list[str] = Field(default_factory=list)
     trigger_reason: str = ""
     narrator_caption: str = ""
+    risk_level: RiskLevel = RiskLevel.GREEN
     input_tokens: int = 0
     output_tokens: int = 0
     total_tokens: int = 0
@@ -54,6 +84,9 @@ class Incident(BaseModel):
     timestamp: datetime
     source_id: str
     incident_type: IncidentType
+    incident_family: IncidentFamily = IncidentFamily.NORMAL
+    scenario_label: str = "NORMAL"
+    dispatch_target: str = "MONITOREO"
     severity: Severity
     confidence: float
     description: str
@@ -68,6 +101,8 @@ class Incident(BaseModel):
     trigger_reason: str = ""
     scene_summary: str = ""
     frame_b64: str | None = None
+    risk_level: RiskLevel = RiskLevel.GREEN
+    device_location: DeviceLocation | None = None
 
 
 class SessionStartRequest(BaseModel):
@@ -76,6 +111,13 @@ class SessionStartRequest(BaseModel):
     webcam_index: int | None = None
     camera_label: str
     frame_sample_rate: float = Field(default=1.0, gt=0.0)
+    device_location: DeviceLocation | None = None
+
+
+class LiveFrameRequest(BaseModel):
+    camera_label: str
+    frame_b64: str
+    device_location: DeviceLocation | None = None
 
 
 class SessionResponse(BaseModel):
@@ -108,6 +150,7 @@ class SessionSummary(BaseModel):
     input_tokens: int = 0
     output_tokens: int = 0
     total_tokens: int = 0
+    device_location: DeviceLocation | None = None
 
 
 class SessionsListResponse(BaseModel):
