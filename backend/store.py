@@ -48,6 +48,7 @@ class InMemoryStore:
             device_location=request.device_location,
         )
         async with self._lock:
+            self.global_next_inference_at = None
             for existing in self.sessions.values():
                 if existing.status == "ACTIVE" and existing.request.camera_label == request.camera_label:
                     existing.status = "STOPPED"
@@ -225,6 +226,7 @@ class InMemoryStore:
         now: datetime,
         baseline_interval_seconds: float,
         alert_interval_seconds: float,
+        soft_throttle_enabled: bool,
     ) -> tuple[bool, str]:
         async with self._lock:
             session = self.sessions[session_id]
@@ -240,6 +242,10 @@ class InMemoryStore:
             if self.global_next_inference_at and now < self.global_next_inference_at:
                 session.saved_calls += 1
                 return False, "project_backoff_window"
+
+            if not soft_throttle_enabled:
+                session.last_frame_hash = frame_hash
+                return True, "ready"
 
             target_interval = baseline_interval_seconds
             if session.last_analysis and (

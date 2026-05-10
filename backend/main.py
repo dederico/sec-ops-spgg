@@ -47,6 +47,7 @@ connections: set[WebSocket] = set()
 boot_time = datetime.now(UTC)
 BASELINE_INFERENCE_INTERVAL_SECONDS = float(os.getenv("BASELINE_INFERENCE_INTERVAL_SECONDS", "1.2"))
 ALERT_INFERENCE_INTERVAL_SECONDS = float(os.getenv("ALERT_INFERENCE_INTERVAL_SECONDS", "0.8"))
+ENABLE_SOFT_THROTTLE = os.getenv("ENABLE_SOFT_THROTTLE", "false").lower() == "true"
 UPLOADS_DIR = Path("uploads")
 UPLOADS_DIR.mkdir(exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=UPLOADS_DIR), name="uploads")
@@ -469,11 +470,18 @@ async def run_mock_pipeline(session_id: UUID) -> None:
             now=datetime.now(UTC),
             baseline_interval_seconds=BASELINE_INFERENCE_INTERVAL_SECONDS,
             alert_interval_seconds=ALERT_INFERENCE_INTERVAL_SECONDS,
+            soft_throttle_enabled=ENABLE_SOFT_THROTTLE,
         )
         if not should_analyze:
             rate_state = await store.get_rate_control_state(session_id)
             last_analysis = (rate_state or {}).get("last_analysis") if rate_state else None
-            fallback_description = "Analisis en pausa para respetar la cuota disponible de Gemini."
+            fallback_description = "Analisis temporalmente diferido mientras Gemini habilita el siguiente intento."
+            skip_explanations = {
+                "duplicate_frame": "Se omitió porque el frame es igual al anterior.",
+                "throttled_interval": "Se omitió por muestreo controlado de inferencia.",
+                "backoff_window": "Gemini devolvió una ventana de reintento y el sistema la está respetando.",
+                "project_backoff_window": "Gemini pidió enfriar el proyecto completo antes del siguiente intento.",
+            }
             await broadcast(
                 {
                     "type": "ANALYSIS_UPDATE",
@@ -496,8 +504,8 @@ async def run_mock_pipeline(session_id: UUID) -> None:
                         "ai_mode": active_ai_mode,
                         "detection_basis": skip_reason,
                         "observed_signals": last_analysis.get("observed_signals", []) if last_analysis else [],
-                        "trigger_reason": f"Se omitió llamada a Gemini por {skip_reason}.",
-                        "narrator_caption": last_analysis.get("narrator_caption") if last_analysis else "Pausa temporal por cuota de Gemini.",
+                        "trigger_reason": skip_explanations.get(skip_reason, f"Se omitió llamada a Gemini por {skip_reason}."),
+                        "narrator_caption": last_analysis.get("narrator_caption") if last_analysis else "Esperando nueva ventana de análisis en Gemini.",
                         "source_runtime": "live_stream" if session.request.source.value in {"webcam", "mobile", "rtsp"} else "file_stream",
                         "gemini_calls": (rate_state or {}).get("gemini_calls", 0),
                         "saved_calls": (rate_state or {}).get("saved_calls", 0),
