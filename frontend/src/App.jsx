@@ -30,6 +30,7 @@ function App() {
   const fileCaptureTimerRef = useRef(null);
   const [activeMediaUrl, setActiveMediaUrl] = useState("");
   const [activeMediaType, setActiveMediaType] = useState("");
+  const deviceLocationRef = useRef(null);
 
   async function refreshAll() {
     const [healthResponse, sessionsResponse, incidentsResponse, auditResponse, sourcesResponse] = await Promise.all([
@@ -58,6 +59,39 @@ function App() {
     return new Date(value).toLocaleString();
   }
 
+  function formatCoords(location) {
+    if (!location?.latitude || !location?.longitude) {
+      return "--";
+    }
+    return `${location.latitude.toFixed(5)}, ${location.longitude.toFixed(5)}`;
+  }
+
+  function riskClass(riskLevel) {
+    if (riskLevel === "RED") return "risk-red";
+    if (riskLevel === "YELLOW") return "risk-yellow";
+    return "risk-green";
+  }
+
+  async function getSharedLocation() {
+    if (!("geolocation" in navigator)) {
+      return null;
+    }
+    return new Promise((resolve) => {
+      navigator.geolocation.getCurrentPosition(
+        (position) =>
+          resolve({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+            accuracy_meters: position.coords.accuracy,
+            shared_at: new Date().toISOString(),
+            label: "Ubicación compartida desde este dispositivo",
+          }),
+        () => resolve(null),
+        { enableHighAccuracy: true, timeout: 8000, maximumAge: 15000 },
+      );
+    });
+  }
+
   function appendActivity(entry) {
     setActivityFeed((current) => [entry, ...current].slice(0, 18));
   }
@@ -67,10 +101,11 @@ function App() {
       const second = payload.analysis.frame_second ?? 0;
       const source = payload.analysis.camera_label;
       const basis = payload.analysis.detection_basis || "analysis";
+      const scenario = payload.analysis.scenario_label || payload.analysis.incident_type;
       if (payload.analysis.status === "INCIDENT_DETECTED") {
         return {
           tone: "alert",
-          title: `${payload.analysis.incident_type} detectado`,
+          title: `${scenario} detectado`,
           detail: `${source} · t=${second}s · ${payload.analysis.trigger_reason || payload.analysis.model_interpretation}`,
         };
       }
@@ -83,7 +118,7 @@ function App() {
     if (payload.type === "INCIDENT_ALERT") {
       return {
         tone: "alert",
-        title: `Alerta ${payload.incident.incident_type}`,
+        title: `Alerta ${payload.incident.scenario_label || payload.incident.incident_type}`,
         detail: `${payload.incident.source_id} · ${Math.round(payload.incident.confidence * 100)}% · ${payload.incident.description}`,
       };
     }
@@ -177,7 +212,11 @@ function App() {
               description: payload.analysis.model_interpretation,
               signals: payload.analysis.observed_signals || [],
               incident_type: payload.analysis.incident_type,
+              incident_family: payload.analysis.incident_family,
+              scenario_label: payload.analysis.scenario_label,
+              dispatch_target: payload.analysis.dispatch_target,
               has_incident: payload.analysis.status === "INCIDENT_DETECTED",
+              risk_level: payload.analysis.risk_level,
               ai_mode: payload.analysis.ai_mode,
               detection_basis: payload.analysis.detection_basis,
               trigger_reason: payload.analysis.trigger_reason,
@@ -249,6 +288,7 @@ function App() {
     if (localVideoRef.current) {
       localVideoRef.current.srcObject = null;
     }
+    deviceLocationRef.current = null;
   }
 
   function stopFilePlayback() {
@@ -279,7 +319,7 @@ function App() {
     await fetch(`${API_URL}/live/frame`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ camera_label: cameraLabel, frame_b64 }),
+      body: JSON.stringify({ camera_label: cameraLabel, frame_b64, device_location: deviceLocationRef.current }),
     });
   }
 
@@ -311,6 +351,7 @@ function App() {
     const cameraLabel = activeCameraLabel || (sourceType === "mobile" ? "CAM-SPGG-PHONE" : "CAM-SPGG-LIVE");
     stopFilePlayback();
     stopLocalCapture();
+    deviceLocationRef.current = sourceType === "mobile" ? await getSharedLocation() : null;
     const stream = await navigator.mediaDevices.getUserMedia({
       video: sourceType === "mobile" ? { facingMode: "environment" } : true,
       audio: false,
@@ -325,6 +366,7 @@ function App() {
       webcam_index: sourceType === "webcam" ? 0 : undefined,
       camera_label: cameraLabel,
       frame_sample_rate: 1,
+      device_location: deviceLocationRef.current,
     });
     await postCurrentFrame(cameraLabel);
     captureTimerRef.current = setInterval(() => {
@@ -413,6 +455,9 @@ function App() {
   }
 
   const selectedSession = sessions.find((session) => session.session_id === selectedSessionId) || null;
+  const activeLocation = latestAnalysis?.device_location || latestAlert?.device_location || selectedSession?.device_location || null;
+  const activeRiskLevel = latestAnalysis?.risk_level || latestAlert?.risk_level || "GREEN";
+  const activeScenario = latestAnalysis?.scenario_label || latestAlert?.scenario_label || latestAnalysis?.incident_type || "NORMAL";
 
   return (
     <main className="shell">
@@ -474,6 +519,8 @@ function App() {
                   ? "Webcam / Live feed"
                   : latestAnalysis?.source === "mobile"
                     ? "Celular / Live bridge"
+                    : latestAnalysis?.source === "rtsp"
+                      ? "Cámara IP"
                     : "Archivo de video"}
               </strong>
             </div>
@@ -494,7 +541,7 @@ function App() {
 
         <article className="aha-card">
           <p className="section-kicker">Interpretación del modelo</p>
-          <h2>{latestAnalysis?.incident_type || "NORMAL"}</h2>
+          <h2>{latestAnalysis?.scenario_label || latestAnalysis?.incident_type || "NORMAL"}</h2>
           <p className="aha-copy">
             {latestAnalysis?.model_interpretation ||
               "Aquí debe aparecer la lectura del modelo sobre lo que está viendo en la escena."}
@@ -509,8 +556,20 @@ function App() {
               <strong>{latestAnalysis?.severity || "--"}</strong>
             </div>
             <div>
+              <span>Riesgo</span>
+              <strong>{latestAnalysis?.risk_level || "--"}</strong>
+            </div>
+            <div>
               <span>Sujetos</span>
               <strong>{latestAnalysis?.subjects_count ?? "--"}</strong>
+            </div>
+            <div>
+              <span>Familia</span>
+              <strong>{latestAnalysis?.incident_family || "--"}</strong>
+            </div>
+            <div>
+              <span>Despacho</span>
+              <strong>{latestAnalysis?.dispatch_target || "--"}</strong>
             </div>
             <div>
               <span>Tokens entrada</span>
@@ -545,7 +604,7 @@ function App() {
 
         <article className={`alarm-card ${latestAlert ? "alarm-on" : ""}`}>
           <p className="section-kicker">AHA Moment</p>
-          <h2>{latestAlert ? `${latestAlert.incident_type} detectado` : "Sin alarma aún"}</h2>
+          <h2>{latestAlert ? `${latestAlert.scenario_label || latestAlert.incident_type} detectado` : "Sin alarma aún"}</h2>
           <p className="aha-copy">
             {latestAlert
               ? latestAlert.description
@@ -553,7 +612,7 @@ function App() {
           </p>
           <div className="alarm-strip">
             <span>Estado</span>
-            <strong>{latestAlert ? latestAlert.severity : "Observación"}</strong>
+            <strong>{latestAlert ? `${latestAlert.risk_level} · ${latestAlert.severity}` : "Observación"}</strong>
           </div>
           <div className="alarm-strip">
             <span>Detonante</span>
@@ -568,6 +627,46 @@ function App() {
             <strong>{latestAlert?.scene_summary || "Sin resumen todavía"}</strong>
           </div>
         </article>
+      </section>
+
+      <section className={`operations-strip ${riskClass(activeRiskLevel)}`}>
+        <div className="operations-head">
+          <div>
+            <p className="section-kicker">Ubicación y Respuesta Operativa</p>
+            <h2>{activeScenario}</h2>
+          </div>
+          <span className={`status-pill ${activeRiskLevel === "RED" ? "danger" : "live"}`}>{activeRiskLevel}</span>
+        </div>
+        <div className="operations-grid">
+          <div>
+            <span>Ubicación del dispositivo</span>
+            <strong>{activeLocation ? formatCoords(activeLocation) : "Sin ubicación compartida"}</strong>
+            <p className="helper-copy">
+              {activeLocation
+                ? `Precisión aproximada: ${Math.round(activeLocation.accuracy_meters || 0)} m`
+                : "La ubicación se comparte cuando la fuente móvil autoriza geolocalización."}
+            </p>
+            {activeLocation ? (
+              <a href={`https://maps.google.com/?q=${activeLocation.latitude},${activeLocation.longitude}`} target="_blank" rel="noreferrer">
+                Abrir ubicación en mapa
+              </a>
+            ) : null}
+          </div>
+          <div>
+            <span>Acción recomendada</span>
+            <strong>{latestAnalysis?.recommended_action || latestAlert?.recommended_action || "Continuar monitoreo."}</strong>
+            <p className="helper-copy">
+              {latestAnalysis?.dispatch_target || latestAlert?.dispatch_target || "MONITOREO"} · {latestAnalysis?.incident_family || latestAlert?.incident_family || "NORMAL"}
+            </p>
+          </div>
+          <div>
+            <span>Fuente operativa</span>
+            <strong>{latestAnalysis ? sourceLabel(latestAnalysis.source) : "Sin fuente activa"}</strong>
+            <p className="helper-copy">
+              {latestAnalysis?.camera_label || selectedSession?.camera_label || "Sin sesión"} · {latestAnalysis?.source_path || selectedSession?.source_path || "stream en vivo"}
+            </p>
+          </div>
+        </div>
       </section>
 
       <section className="grid">
@@ -749,6 +848,10 @@ function App() {
                     <strong>{selectedSession.total_tokens}</strong>
                   </div>
                   <div>
+                    <span>Ubicación compartida</span>
+                    <strong>{selectedSession.device_location ? formatCoords(selectedSession.device_location) : "Sin ubicación"}</strong>
+                  </div>
+                  <div>
                     <span>Siguiente inferencia</span>
                     <strong>{selectedSession.next_inference_at ? formatDateTime(selectedSession.next_inference_at) : "Sin espera"}</strong>
                   </div>
@@ -767,12 +870,15 @@ function App() {
                             <strong>
                               t={item.frame_second}s · frame {item.frame_number}
                             </strong>
-                            <span className={`status-pill ${item.has_incident ? "danger" : "live"}`}>{item.incident_type}</span>
+                            <span className={`status-pill ${item.has_incident ? "danger" : "live"}`}>{item.scenario_label || item.incident_type}</span>
                           </div>
                           <p className="narrative-description">{item.description}</p>
                           <div className="narrative-meta">
                             <span>{item.detection_basis}</span>
                             <span>{item.ai_mode}</span>
+                            <span>{item.incident_family || "NORMAL"}</span>
+                            <span>{item.dispatch_target || "MONITOREO"}</span>
+                            <span>{item.risk_level || "GREEN"}</span>
                           </div>
                           {item.trigger_reason ? <div className="narrative-reason">{item.trigger_reason}</div> : null}
                           {item.signals?.length ? (
@@ -822,7 +928,7 @@ function App() {
               <img src={incident.frame_b64} alt={incident.incident_type} />
               <div>
                 <p className={`severity severity-${incident.severity.toLowerCase()}`}>
-                  {incident.incident_type} · {incident.severity}
+                  {incident.scenario_label || incident.incident_type} · {incident.risk_level || incident.severity}
                 </p>
                 <p>{incident.description}</p>
                 <small>
