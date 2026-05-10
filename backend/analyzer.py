@@ -53,7 +53,7 @@ class AnalyzerConfig:
 
 def get_analyzer_config() -> AnalyzerConfig:
     enabled = os.getenv("ENABLE_REAL_AI", "").lower() == "true"
-    model = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+    model = os.getenv("GEMINI_MODEL", "gemini-2.5-pro")
     api_key_present = bool(os.getenv("GEMINI_API_KEY"))
     return AnalyzerConfig(enabled=enabled, model=model, api_key_present=api_key_present)
 

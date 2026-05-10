@@ -44,8 +44,8 @@ app.add_middleware(
 store = InMemoryStore()
 connections: set[WebSocket] = set()
 boot_time = datetime.now(UTC)
-BASELINE_INFERENCE_INTERVAL_SECONDS = float(os.getenv("BASELINE_INFERENCE_INTERVAL_SECONDS", "5"))
-ALERT_INFERENCE_INTERVAL_SECONDS = float(os.getenv("ALERT_INFERENCE_INTERVAL_SECONDS", "2.5"))
+BASELINE_INFERENCE_INTERVAL_SECONDS = float(os.getenv("BASELINE_INFERENCE_INTERVAL_SECONDS", "1.2"))
+ALERT_INFERENCE_INTERVAL_SECONDS = float(os.getenv("ALERT_INFERENCE_INTERVAL_SECONDS", "0.8"))
 UPLOADS_DIR = Path("uploads")
 UPLOADS_DIR.mkdir(exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=UPLOADS_DIR), name="uploads")
@@ -124,7 +124,7 @@ MOBILE_BRIDGE_HTML = """
         canvas.height = video.videoHeight || 360;
         const ctx = canvas.getContext("2d");
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const frame_b64 = canvas.toDataURL("image/jpeg", 0.76);
+        const frame_b64 = canvas.toDataURL("image/jpeg", 0.92);
         await fetch("/live/frame", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -316,7 +316,7 @@ COMMAND_CENTER_HTML = """
           laptopCanvas.height = video.videoHeight;
           const ctx = laptopCanvas.getContext("2d");
           ctx.drawImage(video, 0, 0, laptopCanvas.width, laptopCanvas.height);
-          const frame_b64 = laptopCanvas.toDataURL("image/jpeg", 0.76);
+          const frame_b64 = laptopCanvas.toDataURL("image/jpeg", 0.92);
           await fetch("/live/frame", {
             method: "POST",
             headers: { "Content-Type": "application/json" },

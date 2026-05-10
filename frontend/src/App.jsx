@@ -20,6 +20,7 @@ function App() {
   const [activeCameraLabel, setActiveCameraLabel] = useState("CAM-SPGG-LIVE");
   const [deviceMode, setDeviceMode] = useState("observer");
   const [activeSessionId, setActiveSessionId] = useState("");
+  const [selectedSessionId, setSelectedSessionId] = useState("");
   const [analysisHistory, setAnalysisHistory] = useState([]);
   const localVideoRef = useRef(null);
   const captureCanvasRef = useRef(null);
@@ -43,6 +44,18 @@ function App() {
     setIncidents((await incidentsResponse.json()).incidents);
     setAudit(await auditResponse.json());
     setSources((await sourcesResponse.json()).sources);
+  }
+
+  function sourceLabel(source) {
+    if (source === "webcam") return "Webcam / Live feed";
+    if (source === "mobile") return "Celular / Live bridge";
+    if (source === "rtsp") return "Cámara IP";
+    return "Archivo de video";
+  }
+
+  function formatDateTime(value) {
+    if (!value) return "--";
+    return new Date(value).toLocaleString();
   }
 
   function appendActivity(entry) {
@@ -116,6 +129,36 @@ function App() {
   }
 
   useEffect(() => {
+    if (!sessions.length) {
+      if (selectedSessionId) {
+        setSelectedSessionId("");
+        setAnalysisHistory([]);
+      }
+      return;
+    }
+
+    const stillExists = sessions.some((session) => session.session_id === selectedSessionId);
+    if (selectedSessionId && stillExists) {
+      return;
+    }
+
+    const preferredSession =
+      sessions.find((session) => session.session_id === activeSessionId) ||
+      sessions.find((session) => session.status === "ACTIVE") ||
+      sessions[0];
+
+    if (preferredSession) {
+      setSelectedSessionId(preferredSession.session_id);
+    }
+  }, [sessions, activeSessionId, selectedSessionId]);
+
+  useEffect(() => {
+    if (selectedSessionId) {
+      refreshHistory(selectedSessionId);
+    }
+  }, [selectedSessionId]);
+
+  useEffect(() => {
     refreshAll();
     const ws = new WebSocket(WS_URL);
     ws.onopen = () => ws.send("subscribe");
@@ -170,6 +213,7 @@ function App() {
     });
     const data = await response.json();
     setActiveSessionId(data.session_id);
+    setSelectedSessionId(data.session_id);
     setAnalysisHistory([]);
     refreshAll();
   }
@@ -185,6 +229,9 @@ function App() {
     await fetch(`${API_URL}/sessions/${sessionId}/stop`, { method: "POST" });
     if (sessionId === activeSessionId) {
       setActiveSessionId("");
+    }
+    if (sessionId === selectedSessionId) {
+      setSelectedSessionId("");
       setAnalysisHistory([]);
     }
     refreshAll();
@@ -228,7 +275,7 @@ function App() {
     canvas.height = video.videoHeight;
     const context = canvas.getContext("2d");
     context.drawImage(video, 0, 0, canvas.width, canvas.height);
-    const frame_b64 = canvas.toDataURL("image/jpeg", 0.76);
+    const frame_b64 = canvas.toDataURL("image/jpeg", 0.92);
     await fetch(`${API_URL}/live/frame`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -321,7 +368,7 @@ function App() {
     canvas.height = video.videoHeight;
     const context = canvas.getContext("2d");
     context.drawImage(video, 0, 0, canvas.width, canvas.height);
-    const frame_b64 = canvas.toDataURL("image/jpeg", 0.76);
+    const frame_b64 = canvas.toDataURL("image/jpeg", 0.92);
     await fetch(`${API_URL}/live/frame`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -364,6 +411,8 @@ function App() {
     }
     return <img src={latestAnalysis.frame_b64} alt={latestAnalysis.incident_type} className="hero-frame" />;
   }
+
+  const selectedSession = sessions.find((session) => session.session_id === selectedSessionId) || null;
 
   return (
     <main className="shell">
@@ -600,40 +649,155 @@ function App() {
         </article>
       </section>
 
-      <section className="grid">
-        <article className="card">
-          <h2>Sesiones</h2>
-          <ul className="list">
-            {sessions.map((session) => (
-              <li key={session.session_id}>
-                <div className="session-head">
-                  <strong>{session.camera_label}</strong>
-                  <span className={`status-pill ${session.status === "ACTIVE" ? "live" : ""}`}>{session.status}</span>
-                </div>
-                <div>
-                  {session.source === "webcam"
-                    ? "Live Analysis"
-                    : session.source === "mobile"
-                      ? "Mobile Bridge"
-                      : session.source === "rtsp"
-                        ? "Camara IP"
-                        : "Archivo"}{" "}
-                  · {session.source_path || "live"}
-                </div>
-                <div>
-                  Frames: {session.frames_analyzed} | Incidentes: {session.incidents_detected}
-                </div>
-                <div>
-                  Gemini: {session.gemini_calls} llamadas | Tokens: {session.total_tokens}
-                </div>
-                {session.status === "ACTIVE" ? (
-                  <button onClick={() => stopSession(session.session_id)}>Detener</button>
-                ) : null}
-              </li>
-            ))}
-          </ul>
-        </article>
+      <section className="sessions-section">
+        <div className="section-headline">
+          <div>
+            <p className="section-kicker">Sesiones</p>
+            <h2>Explorador de sesiones</h2>
+          </div>
+          <p className="helper-copy">
+            Aquí puedes entrar a cada sesión, ver qué interpretó el modelo y leer la secuencia completa sin abrir JSON.
+          </p>
+        </div>
+        <div className="sessions-layout">
+          <aside className="session-rail">
+            {sessions.length ? (
+              sessions.map((session) => (
+                <button
+                  key={session.session_id}
+                  className={`session-tab ${selectedSessionId === session.session_id ? "session-tab-active" : ""}`}
+                  onClick={() => setSelectedSessionId(session.session_id)}
+                >
+                  <div className="session-tab-top">
+                    <strong>{session.camera_label}</strong>
+                    <span className={`status-pill ${session.status === "ACTIVE" ? "live" : ""}`}>{session.status}</span>
+                  </div>
+                  <div className="session-tab-meta">
+                    {sourceLabel(session.source)} · {session.source_path || "live"}
+                  </div>
+                  <div className="session-tab-stats">
+                    <span>{session.frames_analyzed} frames</span>
+                    <span>{session.incidents_detected} incidentes</span>
+                    <span>{session.total_tokens} tokens</span>
+                  </div>
+                </button>
+              ))
+            ) : (
+              <div className="empty-session-state">Todavía no hay sesiones registradas.</div>
+            )}
+          </aside>
 
+          <div className="session-detail">
+            {selectedSession ? (
+              <>
+                <div className="session-detail-header">
+                  <div>
+                    <p className="section-kicker">Sesión seleccionada</p>
+                    <h3>{selectedSession.camera_label}</h3>
+                  </div>
+                  <div className="session-detail-actions">
+                    {selectedSession.status === "ACTIVE" ? (
+                      <button onClick={() => stopSession(selectedSession.session_id)}>Detener sesión</button>
+                    ) : null}
+                    <button onClick={() => refreshHistory(selectedSession.session_id)}>Actualizar bitácora</button>
+                  </div>
+                </div>
+
+                <div className="session-detail-grid">
+                  <div>
+                    <span>Origen</span>
+                    <strong>{sourceLabel(selectedSession.source)}</strong>
+                  </div>
+                  <div>
+                    <span>Ruta o stream</span>
+                    <strong>{selectedSession.source_path || "Entrada en vivo del operador"}</strong>
+                  </div>
+                  <div>
+                    <span>Inició</span>
+                    <strong>{formatDateTime(selectedSession.started_at)}</strong>
+                  </div>
+                  <div>
+                    <span>Estado</span>
+                    <strong>{selectedSession.status}</strong>
+                  </div>
+                  <div>
+                    <span>Frames analizados</span>
+                    <strong>{selectedSession.frames_analyzed}</strong>
+                  </div>
+                  <div>
+                    <span>Incidentes detectados</span>
+                    <strong>{selectedSession.incidents_detected}</strong>
+                  </div>
+                  <div>
+                    <span>Llamadas a Gemini</span>
+                    <strong>{selectedSession.gemini_calls}</strong>
+                  </div>
+                  <div>
+                    <span>Llamadas ahorradas</span>
+                    <strong>{selectedSession.saved_calls}</strong>
+                  </div>
+                  <div>
+                    <span>Tokens de entrada</span>
+                    <strong>{selectedSession.input_tokens}</strong>
+                  </div>
+                  <div>
+                    <span>Tokens de salida</span>
+                    <strong>{selectedSession.output_tokens}</strong>
+                  </div>
+                  <div>
+                    <span>Tokens totales</span>
+                    <strong>{selectedSession.total_tokens}</strong>
+                  </div>
+                  <div>
+                    <span>Siguiente inferencia</span>
+                    <strong>{selectedSession.next_inference_at ? formatDateTime(selectedSession.next_inference_at) : "Sin espera"}</strong>
+                  </div>
+                </div>
+
+                <div className="session-narrative">
+                  <div className="session-head">
+                    <h3>Interpretaciones de la sesión</h3>
+                    <span>{analysisHistory.length} registros visibles</span>
+                  </div>
+                  <ul className="list narrative-list">
+                    {analysisHistory.length ? (
+                      [...analysisHistory].reverse().map((item, index) => (
+                        <li key={`${item.frame_number}-${index}`} className="narrative-entry">
+                          <div className="session-head">
+                            <strong>
+                              t={item.frame_second}s · frame {item.frame_number}
+                            </strong>
+                            <span className={`status-pill ${item.has_incident ? "danger" : "live"}`}>{item.incident_type}</span>
+                          </div>
+                          <p className="narrative-description">{item.description}</p>
+                          <div className="narrative-meta">
+                            <span>{item.detection_basis}</span>
+                            <span>{item.ai_mode}</span>
+                          </div>
+                          {item.trigger_reason ? <div className="narrative-reason">{item.trigger_reason}</div> : null}
+                          {item.signals?.length ? (
+                            <ul className="signals-list">
+                              {item.signals.map((signal) => (
+                                <li key={signal}>{signal}</li>
+                              ))}
+                            </ul>
+                          ) : null}
+                        </li>
+                      ))
+                    ) : (
+                      <li>Esta sesión todavía no tiene interpretaciones guardadas.</li>
+                    )}
+                  </ul>
+                </div>
+              </>
+            ) : (
+              <div className="empty-session-state">Selecciona una sesión para ver sus interpretaciones.</div>
+            )}
+          </div>
+        </div>
+      </section>
+
+      <section className="grid">
         <article className="card">
           <h2>Actividad Reciente</h2>
           <ul className="list">
@@ -670,41 +834,6 @@ function App() {
         </div>
       </section>
 
-      <section className="card">
-        <div className="session-head">
-          <h2>Bitácora Narrativa por Frame</h2>
-          {activeSessionId ? <button onClick={() => refreshHistory(activeSessionId)}>Actualizar bitácora</button> : null}
-        </div>
-        <ul className="list narrative-list">
-          {analysisHistory.length ? (
-            [...analysisHistory].reverse().map((item, index) => (
-              <li key={`${item.frame_number}-${index}`}>
-                <div className="session-head">
-                  <strong>
-                    t={item.frame_second}s · frame {item.frame_number}
-                  </strong>
-                  <span className={`status-pill ${item.has_incident ? "danger" : "live"}`}>{item.incident_type}</span>
-                </div>
-                <div>{item.description}</div>
-                <div className="narrative-meta">
-                  <span>{item.detection_basis}</span>
-                  <span>{item.ai_mode}</span>
-                </div>
-                {item.trigger_reason ? <div>{item.trigger_reason}</div> : null}
-                {item.signals?.length ? (
-                  <ul className="signals-list">
-                    {item.signals.map((signal) => (
-                      <li key={signal}>{signal}</li>
-                    ))}
-                  </ul>
-                ) : null}
-              </li>
-            ))
-          ) : (
-            <li>Sin eventos de análisis todavía.</li>
-          )}
-        </ul>
-      </section>
     </main>
   );
 }
