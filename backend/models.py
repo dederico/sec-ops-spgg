@@ -27,6 +27,7 @@ class Severity(str, Enum):
 
 class SourceType(str, Enum):
     WEBCAM = "webcam"
+    MOBILE = "mobile"
     FILE = "file"
     RTSP = "rtsp"
 
@@ -40,6 +41,12 @@ class AnalysisResult(BaseModel):
     recommended_action: str
     subjects_count: int = Field(ge=0)
     bbox: dict[str, int] | None = None
+    observed_signals: list[str] = Field(default_factory=list)
+    trigger_reason: str = ""
+    narrator_caption: str = ""
+    input_tokens: int = 0
+    output_tokens: int = 0
+    total_tokens: int = 0
 
 
 class Incident(BaseModel):
@@ -54,6 +61,12 @@ class Incident(BaseModel):
     frame_hash: str
     chain_hash: str
     session_id: UUID
+    source_type: SourceType | None = None
+    source_path: str | None = None
+    detected_at_second: float | None = None
+    observed_signals: list[str] = Field(default_factory=list)
+    trigger_reason: str = ""
+    scene_summary: str = ""
     frame_b64: str | None = None
 
 
@@ -83,10 +96,18 @@ class SessionStopResponse(BaseModel):
 class SessionSummary(BaseModel):
     session_id: UUID
     camera_label: str
+    source: SourceType
+    source_path: str | None = None
     status: Literal["ACTIVE", "STOPPED"]
     started_at: datetime
     frames_analyzed: int
     incidents_detected: int
+    gemini_calls: int = 0
+    saved_calls: int = 0
+    next_inference_at: datetime | None = None
+    input_tokens: int = 0
+    output_tokens: int = 0
+    total_tokens: int = 0
 
 
 class SessionsListResponse(BaseModel):
@@ -104,4 +125,3 @@ class AuditVerifyResponse(BaseModel):
     verified_at: datetime
     first_record_hash: str | None
     last_record_hash: str | None
-

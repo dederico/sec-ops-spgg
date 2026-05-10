@@ -1,300 +1,726 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CertiVision SPGG Pitch Deck</title>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;700;800&display=swap");
 
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap');
+      :root {
+        --bg: #f6f7f3;
+        --surface: rgba(255, 255, 255, 0.82);
+        --surface-strong: rgba(255, 255, 255, 0.94);
+        --line: rgba(18, 28, 45, 0.1);
+        --text: #0f1728;
+        --muted: #5a6476;
+        --accent: #0f766e;
+        --accent-soft: rgba(15, 118, 110, 0.12);
+        --danger: #b42318;
+        --shadow: 0 28px 70px rgba(23, 32, 53, 0.12);
+        --radius-xl: 28px;
+        --radius-lg: 22px;
+        --radius-md: 16px;
+      }
 
-  .deck { font-family: 'DM Sans', sans-serif; color: var(--color-text-primary); }
-  .nav { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 1.5rem; }
-  .nav button { font-family: 'DM Sans', sans-serif; font-size: 12px; padding: 4px 12px; border: 0.5px solid var(--color-border-secondary); border-radius: 20px; background: transparent; color: var(--color-text-secondary); cursor: pointer; transition: all 0.2s; }
-  .nav button.active { background: #042C53; color: #E6F1FB; border-color: #042C53; }
-  .slide { display: none; animation: fadeIn 0.3s ease; }
-  .slide.active { display: block; }
-  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+      * {
+        box-sizing: border-box;
+      }
 
-  .slide-title { font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-text-tertiary); margin-bottom: 0.5rem; }
-  .headline { font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 800; line-height: 1.15; margin: 0 0 1rem; color: var(--color-text-primary); }
-  .sub { font-size: 15px; color: var(--color-text-secondary); line-height: 1.6; margin: 0 0 1.5rem; }
+      html {
+        scroll-behavior: smooth;
+      }
 
-  .stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 1.25rem 0; }
-  .stat { background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 14px; }
-  .stat-n { font-family: 'Syne', sans-serif; font-size: 26px; font-weight: 800; color: #185FA5; line-height: 1; margin-bottom: 4px; }
-  .stat-l { font-size: 12px; color: var(--color-text-secondary); }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Manrope", sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(circle at top left, rgba(15, 118, 110, 0.12), transparent 28%),
+          radial-gradient(circle at top right, rgba(59, 130, 246, 0.12), transparent 22%),
+          linear-gradient(180deg, #fbfbf8 0%, #f2f4ef 100%);
+      }
 
-  .problem-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 1rem 0; }
-  .problem-card { border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-md); padding: 14px; }
-  .problem-card .icon { font-size: 20px; margin-bottom: 8px; color: #A32D2D; }
-  .problem-card h4 { font-size: 13px; font-weight: 500; margin: 0 0 4px; color: var(--color-text-primary); }
-  .problem-card p { font-size: 12px; color: var(--color-text-secondary); margin: 0; line-height: 1.5; }
+      img {
+        max-width: 100%;
+        display: block;
+      }
 
-  .solution-steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 1.25rem 0; }
-  .step { text-align: center; padding: 14px 8px; background: var(--color-background-secondary); border-radius: var(--border-radius-md); }
-  .step-num { font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 800; color: #185FA5; margin-bottom: 6px; }
-  .step-label { font-size: 11px; color: var(--color-text-secondary); line-height: 1.4; }
+      button {
+        font: inherit;
+      }
 
-  .tech-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 1rem 0; }
-  .tech-card { border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-md); padding: 14px; }
-  .tech-card .tc-head { font-size: 13px; font-weight: 500; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
-  .tc-icon { font-size: 18px; color: #185FA5; }
-  .tech-card p { font-size: 12px; color: var(--color-text-secondary); margin: 0; line-height: 1.5; }
-  .tag { display: inline-block; font-size: 10px; padding: 2px 8px; border-radius: 20px; background: #E6F1FB; color: #0C447C; margin-top: 6px; margin-right: 4px; }
+      .deck {
+        width: min(1180px, calc(100vw - 24px));
+        margin: 0 auto;
+        padding: 18px 0 56px;
+      }
 
-  .impact-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin: 1rem 0; }
-  .impact-card { border-radius: var(--border-radius-md); padding: 14px; }
-  .impact-card.blue { background: #E6F1FB; }
-  .impact-card.green { background: #EAF3DE; }
-  .impact-card.amber { background: #FAEEDA; }
-  .impact-card h4 { font-size: 12px; font-weight: 500; margin: 0 0 4px; }
-  .impact-card.blue h4 { color: #0C447C; }
-  .impact-card.green h4 { color: #27500A; }
-  .impact-card.amber h4 { color: #633806; }
-  .impact-card p { font-size: 12px; margin: 0; line-height: 1.5; }
-  .impact-card.blue p { color: #185FA5; }
-  .impact-card.green p { color: #3B6D11; }
-  .impact-card.amber p { color: #854F0B; }
+      .topbar {
+        position: sticky;
+        top: 10px;
+        z-index: 20;
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 14px;
+        margin-bottom: 20px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: rgba(246, 247, 243, 0.84);
+        backdrop-filter: blur(16px);
+      }
 
-  .divider { border: none; border-top: 0.5px solid var(--color-border-tertiary); margin: 1rem 0; }
+      .brand {
+        min-width: 0;
+      }
 
-  .cta-box { background: #042C53; border-radius: var(--border-radius-lg); padding: 1.5rem; text-align: center; margin-top: 1rem; }
-  .cta-box h3 { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 800; color: #B5D4F4; margin: 0 0 0.5rem; }
-  .cta-box p { font-size: 14px; color: #85B7EB; margin: 0 0 1rem; }
-  .cta-btn { display: inline-block; background: #378ADD; color: #E6F1FB; font-size: 13px; font-weight: 500; padding: 8px 20px; border-radius: 20px; cursor: pointer; border: none; font-family: 'DM Sans', sans-serif; }
+      .brand-mark {
+        display: block;
+        font-size: 11px;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
 
-  .roadmap { margin: 1rem 0; }
-  .roadmap-item { display: flex; gap: 14px; margin-bottom: 14px; align-items: flex-start; }
-  .rm-dot { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; font-family: 'Syne', sans-serif; }
-  .rm-dot.now { background: #E6F1FB; color: #0C447C; }
-  .rm-dot.next { background: #EAF3DE; color: #27500A; }
-  .rm-dot.future { background: #FAEEDA; color: #633806; }
-  .rm-content h4 { font-size: 13px; font-weight: 500; margin: 0 0 2px; color: var(--color-text-primary); }
-  .rm-content p { font-size: 12px; color: var(--color-text-secondary); margin: 0; }
+      .brand-title {
+        display: block;
+        font-family: "Plus Jakarta Sans", sans-serif;
+        font-size: 16px;
+        font-weight: 800;
+        color: var(--text);
+      }
 
-  .quote-block { border-left: 3px solid #378ADD; padding: 10px 16px; margin: 1rem 0; }
-  .quote-block p { font-size: 14px; font-style: italic; color: var(--color-text-secondary); margin: 0; line-height: 1.6; }
+      .nav {
+        display: flex;
+        gap: 8px;
+        overflow-x: auto;
+        padding-bottom: 2px;
+        scrollbar-width: none;
+      }
 
-  .slide-footer { font-size: 11px; color: var(--color-text-tertiary); margin-top: 1.5rem; display: flex; justify-content: space-between; }
-</style>
+      .nav::-webkit-scrollbar {
+        display: none;
+      }
 
-<div class="deck">
-  <h2 class="sr-only">CertiVision SPGG — Pitch Deck para hackathon TechEx 2026</h2>
+      .nav button {
+        flex: 0 0 auto;
+        padding: 10px 14px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: transparent;
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: 160ms ease;
+      }
 
-  <div class="nav" id="nav"></div>
-  <div id="slides"></div>
-</div>
+      .nav button.active {
+        background: var(--text);
+        color: #fff;
+        border-color: var(--text);
+      }
 
-<script>
-const slides = [
-  {
-    label: "01 · Portada",
-    html: `
-      <p class="slide-title">TechEx Intelligent Enterprise Solutions Hackathon 2026</p>
-      <h1 class="headline">CertiVision<br>SPGG</h1>
-      <p class="sub" style="font-size:17px;">Monitoreo municipal autónomo con IA.<br>Sin agentes humanos. Sin puntos ciegos. Sin corrupción.</p>
-      <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:0.5rem;">
-        <span class="tag" style="font-size:12px; padding:5px 14px;">San Pedro Garza García, NL</span>
-        <span class="tag" style="font-size:12px; padding:5px 14px; background:#EAF3DE; color:#27500A;">Gemini Vision API</span>
-        <span class="tag" style="font-size:12px; padding:5px 14px; background:#FAEEDA; color:#633806;">Python · FastAPI · React</span>
+      .slide {
+        display: none;
+        animation: fade 220ms ease;
+      }
+
+      .slide.active {
+        display: block;
+      }
+
+      @keyframes fade {
+        from {
+          opacity: 0;
+          transform: translateY(6px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .panel {
+        border: 1px solid var(--line);
+        border-radius: var(--radius-xl);
+        background: var(--surface);
+        box-shadow: var(--shadow);
+        overflow: hidden;
+      }
+
+      .panel-inner {
+        padding: 24px;
+      }
+
+      .eyebrow {
+        display: inline-block;
+        margin-bottom: 10px;
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--accent);
+      }
+
+      .headline {
+        margin: 0;
+        font-family: "Plus Jakarta Sans", sans-serif;
+        font-size: clamp(32px, 5vw, 64px);
+        line-height: 0.98;
+        letter-spacing: -0.04em;
+      }
+
+      .subhead {
+        max-width: 62ch;
+        margin: 14px 0 0;
+        font-size: clamp(15px, 2vw, 19px);
+        line-height: 1.7;
+        color: var(--muted);
+      }
+
+      .hero-grid,
+      .two-col,
+      .three-col,
+      .stats,
+      .cards,
+      .roadmap {
+        display: grid;
+        gap: 16px;
+      }
+
+      .hero-grid {
+        grid-template-columns: 1.2fr 0.8fr;
+        align-items: stretch;
+      }
+
+      .three-col {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .two-col {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .stats {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        margin-top: 22px;
+      }
+
+      .cards {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .roadmap {
+        grid-template-columns: 1fr;
+      }
+
+      .card {
+        min-width: 0;
+        padding: 18px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-lg);
+        background: var(--surface-strong);
+      }
+
+      .card.soft {
+        background: linear-gradient(180deg, rgba(15, 118, 110, 0.08), rgba(255, 255, 255, 0.96));
+      }
+
+      .metric {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        min-height: 124px;
+      }
+
+      .metric-value {
+        font-family: "Plus Jakarta Sans", sans-serif;
+        font-size: clamp(28px, 4vw, 42px);
+        font-weight: 800;
+        line-height: 1;
+        letter-spacing: -0.04em;
+      }
+
+      .metric-label {
+        margin-top: 10px;
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.55;
+      }
+
+      .stack {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 18px;
+      }
+
+      .pill {
+        padding: 10px 14px;
+        border-radius: 999px;
+        background: var(--accent-soft);
+        color: var(--accent);
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .municipio-card {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        min-height: 100%;
+        background:
+          linear-gradient(180deg, rgba(15, 118, 110, 0.08), rgba(255, 255, 255, 0.94)),
+          #ffffff;
+      }
+
+      .municipio-visual {
+        display: grid;
+        place-items: center;
+        padding: 18px;
+        border-radius: 22px;
+        background:
+          radial-gradient(circle at center, rgba(15, 118, 110, 0.12), transparent 58%),
+          #f8faf8;
+        border: 1px solid rgba(15, 118, 110, 0.12);
+      }
+
+      .municipio-visual img {
+        width: min(220px, 52vw);
+        aspect-ratio: 1;
+        object-fit: contain;
+        filter: drop-shadow(0 18px 34px rgba(15, 23, 40, 0.12));
+      }
+
+      .small-label {
+        margin: 0 0 8px;
+        font-size: 12px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+
+      .body-copy,
+      .bullet {
+        margin: 0;
+        font-size: 15px;
+        line-height: 1.7;
+        color: var(--muted);
+      }
+
+      .card-title {
+        margin: 0 0 8px;
+        font-size: 19px;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+      }
+
+      .quote {
+        padding: 18px 20px;
+        border-left: 3px solid var(--accent);
+        border-radius: 0 18px 18px 0;
+        background: rgba(15, 118, 110, 0.06);
+        color: #24403d;
+        font-size: 17px;
+        line-height: 1.7;
+      }
+
+      .timeline-item {
+        display: grid;
+        grid-template-columns: 40px 1fr;
+        gap: 14px;
+        align-items: start;
+      }
+
+      .timeline-dot {
+        display: grid;
+        place-items: center;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: var(--text);
+        color: #fff;
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .danger {
+        color: var(--danger);
+      }
+
+      .footer {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        margin-top: 18px;
+        padding-top: 16px;
+        border-top: 1px solid var(--line);
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .cta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 20px;
+      }
+
+      .cta .pill {
+        background: var(--text);
+        color: #fff;
+      }
+
+      .full-image {
+        width: 100%;
+        border-radius: 22px;
+        border: 1px solid var(--line);
+        background: linear-gradient(180deg, #f7faf7, #edf6f2);
+        padding: 20px;
+      }
+
+      .full-image img {
+        width: min(320px, 100%);
+        margin: 0 auto;
+      }
+
+      @media (max-width: 980px) {
+        .hero-grid,
+        .two-col,
+        .three-col,
+        .stats,
+        .cards {
+          grid-template-columns: 1fr;
+        }
+
+        .topbar {
+          border-radius: 24px;
+          align-items: flex-start;
+          flex-direction: column;
+        }
+      }
+
+      @media (max-width: 720px) {
+        .deck {
+          width: min(100vw - 16px, 100%);
+          padding-top: 10px;
+        }
+
+        .panel-inner {
+          padding: 18px;
+        }
+
+        .headline {
+          font-size: clamp(28px, 11vw, 46px);
+        }
+
+        .subhead,
+        .body-copy,
+        .bullet,
+        .quote {
+          font-size: 14px;
+        }
+
+        .footer {
+          flex-direction: column;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="deck">
+      <div class="topbar">
+        <div class="brand">
+          <span class="brand-mark">TechEx Hackathon 2026</span>
+          <span class="brand-title">CertiVision SPGG</span>
+        </div>
+        <div class="nav" id="nav"></div>
       </div>
-      <hr class="divider" style="margin-top:1.5rem;">
-      <div class="stat-row">
-        <div class="stat"><div class="stat-n">24/7</div><div class="stat-l">Cobertura continua sin fatiga</div></div>
-        <div class="stat"><div class="stat-n">0</div><div class="stat-l">Evidencia eliminada manualmente</div></div>
-        <div class="stat"><div class="stat-n">100%</div><div class="stat-l">Trazabilidad de incidentes</div></div>
-      </div>
-      <div class="slide-footer"><span>CertiVision SPGG</span><span>Slide 1 / 7</span></div>
-    `
-  },
-  {
-    label: "02 · El problema",
-    html: `
-      <p class="slide-title">El problema</p>
-      <h2 class="headline">El eslabón más débil<br>es humano.</h2>
-      <p class="sub">Los municipios invierten millones en cámaras. El valor se destruye en la sala de monitoreo.</p>
-      <div class="problem-grid">
-        <div class="problem-card">
-          <div class="icon"><i class="ti ti-eye-off" aria-hidden="true"></i></div>
-          <h4>Eliminación de evidencia</h4>
-          <p>Los agentes con acceso físico a grabaciones pueden borrar o sobreescribir clips comprometedores.</p>
-        </div>
-        <div class="problem-card">
-          <div class="icon"><i class="ti ti-map-off" aria-hidden="true"></i></div>
-          <h4>Puntos ciegos intencionales</h4>
-          <p>Operadores pueden redirigir cámaras o ignorar zonas donde tienen intereses personales.</p>
-        </div>
-        <div class="problem-card">
-          <div class="icon"><i class="ti ti-zzz" aria-hidden="true"></i></div>
-          <h4>Fatiga y distracción</h4>
-          <p>Un humano monitoreando 20+ pantallas pierde el 90% de los incidentes después de 22 minutos.</p>
-        </div>
-        <div class="problem-card">
-          <div class="icon"><i class="ti ti-lock-off" aria-hidden="true"></i></div>
-          <h4>Sin trazabilidad real</h4>
-          <p>No existe un log auditable de qué vio el agente, cuándo, y qué decisión tomó.</p>
-        </div>
-      </div>
-      <div class="quote-block"><p>"El problema no es la tecnología de cámaras. Es que un humano decide qué existe y qué no."</p></div>
-      <div class="slide-footer"><span>CertiVision SPGG</span><span>Slide 2 / 7</span></div>
-    `
-  },
-  {
-    label: "03 · La solución",
-    html: `
-      <p class="slide-title">La solución</p>
-      <h2 class="headline">IA que ve todo.<br>No olvida nada.<br>No tiene intereses.</h2>
-      <p class="sub">CertiVision reemplaza la vigilancia humana con un pipeline de visión artificial que analiza, clasifica y registra cada frame de forma autónoma e inmutable.</p>
-      <div class="solution-steps">
-        <div class="step"><div class="step-num">01</div><div class="step-label">Ingesta de video<br>(live o grabado)</div></div>
-        <div class="step"><div class="step-num">02</div><div class="step-label">Análisis con<br>Gemini Vision</div></div>
-        <div class="step"><div class="step-num">03</div><div class="step-label">Clasificación<br>de incidente</div></div>
-        <div class="step"><div class="step-num">04</div><div class="step-label">Alerta + registro<br>inmutable</div></div>
-      </div>
-      <hr class="divider">
-      <p style="font-size:13px; font-weight:500; margin-bottom:8px; color:var(--color-text-primary);">Tipos de incidentes detectados en el demo:</p>
-      <div style="display:flex; flex-wrap:wrap; gap:6px;">
-        <span class="tag">Asalto / portación de arma</span>
-        <span class="tag">Persona caída</span>
-        <span class="tag">Vehículo en zona restringida</span>
-        <span class="tag">Aglomeración anormal</span>
-        <span class="tag" style="background:#FCEBEB; color:#A32D2D;">Pelea en vía pública</span>
-      </div>
-      <div class="slide-footer"><span>CertiVision SPGG</span><span>Slide 3 / 7</span></div>
-    `
-  },
-  {
-    label: "04 · Stack técnico",
-    html: `
-      <p class="slide-title">Arquitectura técnica</p>
-      <h2 class="headline">Stack enterprise-ready<br>desde el día uno.</h2>
-      <div class="tech-grid">
-        <div class="tech-card">
-          <div class="tc-head"><i class="ti ti-brain tc-icon" aria-hidden="true"></i> Análisis de IA</div>
-          <p>Google Gemini 2.0 Flash multimodal analiza frames de video en tiempo real. Prompt estructurado con JSON Schema para salida determinista.</p>
-          <span class="tag">Gemini Vision</span><span class="tag">Frame sampling</span>
-        </div>
-        <div class="tech-card">
-          <div class="tc-head"><i class="ti ti-server tc-icon" aria-hidden="true"></i> Backend</div>
-          <p>FastAPI con WebSockets para streaming de alertas. PostgreSQL para log inmutable. FFmpeg para extracción de frames.</p>
-          <span class="tag">Python 3.12</span><span class="tag">FastAPI</span><span class="tag">FFmpeg</span>
-        </div>
-        <div class="tech-card">
-          <div class="tc-head"><i class="ti ti-layout-dashboard tc-icon" aria-hidden="true"></i> Dashboard</div>
-          <p>React + Tailwind. Panel en tiempo real con mapa de incidentes, feed de alertas y timeline auditable.</p>
-          <span class="tag">React</span><span class="tag">WebSockets</span><span class="tag">Leaflet</span>
-        </div>
-        <div class="tech-card">
-          <div class="tc-head"><i class="ti ti-shield-check tc-icon" aria-hidden="true"></i> Trazabilidad</div>
-          <p>Cada frame analizado genera un hash SHA-256. El log es append-only: ningún registro puede modificarse o eliminarse.</p>
-          <span class="tag">Immutable log</span><span class="tag">SHA-256</span>
-        </div>
-      </div>
-      <div class="slide-footer"><span>CertiVision SPGG</span><span>Slide 4 / 7</span></div>
-    `
-  },
-  {
-    label: "05 · Demo",
-    html: `
-      <p class="slide-title">Plan de demostración</p>
-      <h2 class="headline">Lo que los jueces<br>van a ver.</h2>
-      <p class="sub">Dos fases de demo que demuestran capacidad real, no solo slides.</p>
-      <div style="margin: 1rem 0;">
-        <div class="roadmap-item">
-          <div class="rm-dot now">F1</div>
-          <div class="rm-content">
-            <h4>Videos de stock — incidentes pre-grabados</h4>
-            <p>3 videos públicos de cámara de seguridad con escenas de asalto, persona caída y aglomeración. El sistema los analiza en tiempo real y genera alertas con confianza, timestamp y descripción narrativa del evento.</p>
-          </div>
-        </div>
-        <div class="roadmap-item">
-          <div class="rm-dot next">F2</div>
-          <div class="rm-content">
-            <h4>Demo en vivo — asalto simulado</h4>
-            <p>Webcam apuntada a la sala. Presentador levanta las manos y alguien le quita la cartera. El sistema detecta el asalto en menos de 10 segundos, genera alerta con descripción y congela el frame como evidencia.</p>
-          </div>
-        </div>
-        <div class="roadmap-item">
-          <div class="rm-dot future">F3</div>
-          <div class="rm-content">
-            <h4>Log auditable — transparencia total</h4>
-            <p>Se muestra el dashboard con el timeline de cada incidente detectado, su hash de integridad, y el JSON de salida del modelo. Ningún agente humano pudo borrar nada.</p>
-          </div>
-        </div>
-      </div>
-      <div class="slide-footer"><span>CertiVision SPGG</span><span>Slide 5 / 7</span></div>
-    `
-  },
-  {
-    label: "06 · Impacto",
-    html: `
-      <p class="slide-title">Impacto y escalabilidad</p>
-      <h2 class="headline">Empieza en SPGG.<br>Escala a cualquier municipio.</h2>
-      <div class="impact-grid">
-        <div class="impact-card blue">
-          <h4>Transparencia ciudadana</h4>
-          <p>Los logs son auditables por el cabildo, la contraloría y eventualmente por ciudadanos. Fin de la caja negra.</p>
-        </div>
-        <div class="impact-card green">
-          <h4>Reducción de costo</h4>
-          <p>Un operador de IA cubre 100 cámaras simultáneas. El ahorro en nómina puede reinvertirse en infraestructura.</p>
-        </div>
-        <div class="impact-card amber">
-          <h4>Respuesta más rápida</h4>
-          <p>Tiempo de detección de segundos vs. minutos cuando un humano finalmente nota el incidente.</p>
-        </div>
-      </div>
-      <hr class="divider">
-      <p style="font-size:13px; font-weight:500; margin-bottom:8px; color:var(--color-text-primary);">Roadmap post-hackathon:</p>
-      <div class="roadmap">
-        <div class="roadmap-item">
-          <div class="rm-dot now">Q3</div>
-          <div class="rm-content"><h4>Piloto en SPGG — 10 cámaras reales</h4><p>Integración con el C5 municipal, validación con datos reales.</p></div>
-        </div>
-        <div class="roadmap-item">
-          <div class="rm-dot next">Q4</div>
-          <div class="rm-content"><h4>Expansión Área Metropolitana MTY</h4><p>Monterrey, San Nicolás, Guadalupe, Escobedo.</p></div>
-        </div>
-        <div class="roadmap-item">
-          <div class="rm-dot future">2027</div>
-          <div class="rm-content"><h4>SaaS municipal para toda la república</h4><p>API estandarizada compatible con el sistema C5 nacional.</p></div>
-        </div>
-      </div>
-      <div class="slide-footer"><span>CertiVision SPGG</span><span>Slide 6 / 7</span></div>
-    `
-  },
-  {
-    label: "07 · Cierre",
-    html: `
-      <p class="slide-title">Cierre</p>
-      <h2 class="headline">La corrupción necesita<br>dos cosas: oscuridad<br>y memoria selectiva.</h2>
-      <p class="sub">CertiVision elimina ambas. No es un proyecto de cámaras. Es un proyecto de gobernanza.</p>
-      <hr class="divider">
-      <div class="cta-box">
-        <h3>CertiVision SPGG</h3>
-        <p>Monitoreo autónomo · Trazabilidad inmutable · Gobierno transparente</p>
-        <p style="font-size:12px; color:#378ADD; margin-bottom:1rem;">Python · FastAPI · React · Gemini 2.0 Flash · WebSockets · PostgreSQL</p>
-        <button class="cta-btn" onclick="sendPrompt('Ayúdame a crear la arquitectura técnica detallada y los archivos .md del proyecto CertiVision SPGG')">Ver arquitectura técnica ↗</button>
-      </div>
-      <div class="slide-footer"><span>CertiVision SPGG</span><span>Slide 7 / 7</span></div>
-    `
-  }
-];
 
-const navEl = document.getElementById('nav');
-const slidesEl = document.getElementById('slides');
+      <div id="slides"></div>
+    </div>
 
-slides.forEach((s, i) => {
-  const btn = document.createElement('button');
-  btn.textContent = s.label;
-  if (i === 0) btn.classList.add('active');
-  btn.onclick = () => {
-    document.querySelectorAll('.nav button').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.slide').forEach(sl => sl.classList.remove('active'));
-    btn.classList.add('active');
-    document.getElementById('slide-' + i).classList.add('active');
-  };
-  navEl.appendChild(btn);
+    <script>
+      const slides = [
+        {
+          label: "01 Portada",
+          html: `
+            <section class="slide-content panel">
+              <div class="panel-inner">
+                <div class="hero-grid">
+                  <div>
+                    <span class="eyebrow">Monitoreo autónomo municipal</span>
+                    <h1 class="headline">CertiVision<br>SPGG</h1>
+                    <p class="subhead">IA que observa en vivo, interpreta el riesgo y deja un rastro auditable para San Pedro Garza García.</p>
+                    <div class="stack">
+                      <span class="pill">Live analysis</span>
+                      <span class="pill">FastAPI + React</span>
+                      <span class="pill">Gemini Vision</span>
+                    </div>
+                    <div class="stats">
+                      <div class="card metric">
+                        <div class="metric-value">24/7</div>
+                        <div class="metric-label">Cobertura constante sin fatiga operativa.</div>
+                      </div>
+                      <div class="card metric">
+                        <div class="metric-value">0</div>
+                        <div class="metric-label">Dependencia en memoria selectiva del operador.</div>
+                      </div>
+                      <div class="card metric">
+                        <div class="metric-value">1</div>
+                        <div class="metric-label">Bitácora íntegra por cada incidente detectado.</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="card municipio-card">
+                    <div>
+                      <p class="small-label">Municipio objetivo</p>
+                      <h2 class="card-title">San Pedro Garza García, Nuevo León</h2>
+                      <p class="body-copy">Un municipio con infraestructura, exigencia ciudadana y necesidad real de vigilancia trazable.</p>
+                    </div>
+                    <div class="municipio-visual">
+                      <img src="spgg.png" alt="Visual del municipio de San Pedro Garza García" />
+                    </div>
+                  </div>
+                </div>
+                <div class="footer"><span>CertiVision SPGG</span><span>Slide 1 / 7</span></div>
+              </div>
+            </section>
+          `,
+        },
+        {
+          label: "02 Problema",
+          html: `
+            <section class="slide-content panel">
+              <div class="panel-inner">
+                <span class="eyebrow">El problema</span>
+                <h2 class="headline">Las cámaras existen.<br>La confianza no.</h2>
+                <p class="subhead">El valor de la inversión municipal se pierde cuando un humano decide qué mirar, qué ignorar y qué borrar.</p>
+                <div class="cards" style="margin-top:20px;">
+                  <div class="card">
+                    <h3 class="card-title">Evidencia manipulable</h3>
+                    <p class="body-copy">Con acceso físico o privilegios internos, un operador puede ocultar clips, retrasar reportes o crear lagunas deliberadas.</p>
+                  </div>
+                  <div class="card">
+                    <h3 class="card-title">Fatiga operativa</h3>
+                    <p class="body-copy">Monitorear múltiples pantallas reduce drásticamente la capacidad de detectar eventos críticos de forma consistente.</p>
+                  </div>
+                  <div class="card">
+                    <h3 class="card-title">Sin trazabilidad real</h3>
+                    <p class="body-copy">Hoy casi nunca queda un registro verificable de qué vio el sistema, cuándo lo vio y por qué se actuó o no.</p>
+                  </div>
+                  <div class="card">
+                    <h3 class="card-title">Tiempo de respuesta tardío</h3>
+                    <p class="body-copy">El incidente sucede en segundos. La reacción humana llega minutos después, si alguien lo nota a tiempo.</p>
+                  </div>
+                </div>
+                <div class="quote" style="margin-top:20px;">“El punto débil no es la cámara. Es la capa humana entre la escena y la verdad.”</div>
+                <div class="footer"><span>CertiVision SPGG</span><span>Slide 2 / 7</span></div>
+              </div>
+            </section>
+          `,
+        },
+        {
+          label: "03 Solución",
+          html: `
+            <section class="slide-content panel">
+              <div class="panel-inner">
+                <span class="eyebrow">La solución</span>
+                <h2 class="headline">Ver en vivo.<br>Interpretar.<br>Alertar.</h2>
+                <p class="subhead">CertiVision reemplaza el cuello de botella humano con un flujo de visión computacional que observa cada escena, verbaliza su interpretación y registra el incidente con integridad.</p>
+                <div class="three-col" style="margin-top:20px;">
+                  <div class="card soft">
+                    <p class="small-label">01</p>
+                    <h3 class="card-title">Fuente visual</h3>
+                    <p class="body-copy">Archivo, webcam o stream. El sistema sabe exactamente qué fuente está analizando.</p>
+                  </div>
+                  <div class="card soft">
+                    <p class="small-label">02</p>
+                    <h3 class="card-title">Interpretación visible</h3>
+                    <p class="body-copy">La IA explica lo que está viendo: sujetos, cambios de postura, riesgo y contexto.</p>
+                  </div>
+                  <div class="card soft">
+                    <p class="small-label">03</p>
+                    <h3 class="card-title">AHA moment</h3>
+                    <p class="body-copy">Cuando cruza el umbral, la escena deja de ser observación y se convierte en alerta crítica.</p>
+                  </div>
+                </div>
+                <div class="stack">
+                  <span class="pill">Asalto</span>
+                  <span class="pill">Persona caída</span>
+                  <span class="pill">Pelea</span>
+                  <span class="pill">Vehículo restringido</span>
+                  <span class="pill">Aglomeración</span>
+                </div>
+                <div class="footer"><span>CertiVision SPGG</span><span>Slide 3 / 7</span></div>
+              </div>
+            </section>
+          `,
+        },
+        {
+          label: "04 Demo",
+          html: `
+            <section class="slide-content panel">
+              <div class="panel-inner">
+                <span class="eyebrow">Experiencia demo</span>
+                <h2 class="headline">Lo que ve el juez<br>en menos de un minuto.</h2>
+                <div class="two-col" style="margin-top:20px;">
+                  <div class="card">
+                    <p class="small-label">Fase 1</p>
+                    <h3 class="card-title">Análisis de archivo</h3>
+                    <p class="body-copy">El dashboard muestra qué video cargaste, qué frame está leyendo y cómo lo describe el modelo antes del incidente.</p>
+                  </div>
+                  <div class="card">
+                    <p class="small-label">Fase 2</p>
+                    <h3 class="card-title">Análisis en vivo</h3>
+                    <p class="body-copy">La webcam entra en escena, la interpretación cambia en tiempo real y la alerta se dispara frente a los jueces.</p>
+                  </div>
+                </div>
+                <div class="roadmap" style="margin-top:20px;">
+                  <div class="card timeline-item">
+                    <div class="timeline-dot">01</div>
+                    <div>
+                      <h3 class="card-title">Fuente visible</h3>
+                      <p class="body-copy">El operador sabe si la IA está leyendo un archivo, una cámara o un stream.</p>
+                    </div>
+                  </div>
+                  <div class="card timeline-item">
+                    <div class="timeline-dot">02</div>
+                    <div>
+                      <h3 class="card-title">Interpretación humana</h3>
+                      <p class="body-copy">La interfaz verbaliza lo que la IA cree que ocurre: normalidad, observación o riesgo.</p>
+                    </div>
+                  </div>
+                  <div class="card timeline-item">
+                    <div class="timeline-dot">03</div>
+                    <div>
+                      <h3 class="card-title danger">Disparo de alerta</h3>
+                      <p class="body-copy">La escena cruza un umbral y el sistema eleva el incidente con severidad, confianza y acción recomendada.</p>
+                    </div>
+                  </div>
+                </div>
+                <div class="footer"><span>CertiVision SPGG</span><span>Slide 4 / 7</span></div>
+              </div>
+            </section>
+          `,
+        },
+        {
+          label: "05 Stack",
+          html: `
+            <section class="slide-content panel">
+              <div class="panel-inner">
+                <span class="eyebrow">Arquitectura</span>
+                <h2 class="headline">Tecnología suficiente.<br>Sin humo.</h2>
+                <div class="cards" style="margin-top:20px;">
+                  <div class="card">
+                    <h3 class="card-title">Visión e inferencia</h3>
+                    <p class="body-copy">Gemini 2.0 Flash analiza frames y produce una salida estructurada que el backend puede clasificar y transmitir.</p>
+                  </div>
+                  <div class="card">
+                    <h3 class="card-title">Backend en tiempo real</h3>
+                    <p class="body-copy">FastAPI y WebSockets coordinan sesiones, heartbeat, interpretación en vivo y alertas hacia el dashboard.</p>
+                  </div>
+                  <div class="card">
+                    <h3 class="card-title">Procesamiento visual</h3>
+                    <p class="body-copy">FFmpeg y OpenCV resuelven ingesta, muestreo de frames y preparación de fuente para inferencia.</p>
+                  </div>
+                  <div class="card">
+                    <h3 class="card-title">Bitácora auditable</h3>
+                    <p class="body-copy">PostgreSQL append-only y hashes encadenados para verificar integridad de cada análisis.</p>
+                  </div>
+                </div>
+                <div class="footer"><span>CertiVision SPGG</span><span>Slide 5 / 7</span></div>
+              </div>
+            </section>
+          `,
+        },
+        {
+          label: "06 SPGG",
+          html: `
+            <section class="slide-content panel">
+              <div class="panel-inner">
+                <span class="eyebrow">Enfoque territorial</span>
+                <h2 class="headline">Empezar en SPGG<br>tiene sentido.</h2>
+                <div class="hero-grid" style="margin-top:20px;">
+                  <div class="card municipio-card">
+                    <p class="small-label">Visual del municipio</p>
+                    <div class="full-image">
+                      <img src="spgg.png" alt="Visual de San Pedro Garza García" />
+                    </div>
+                  </div>
+                  <div class="cards">
+                    <div class="card">
+                      <h3 class="card-title">Caso piloto claro</h3>
+                      <p class="body-copy">SPGG combina presupuesto, urgencia reputacional y contexto urbano donde la trazabilidad importa.</p>
+                    </div>
+                    <div class="card">
+                      <h3 class="card-title">Escalabilidad regional</h3>
+                      <p class="body-copy">Si funciona en SPGG, el modelo se puede extender al área metropolitana con cambios mínimos de integración.</p>
+                    </div>
+                    <div class="card">
+                      <h3 class="card-title">Gobernanza visible</h3>
+                      <p class="body-copy">El municipio puede demostrar no solo vigilancia, sino evidencia defendible y verificable.</p>
+                    </div>
+                    <div class="card">
+                      <h3 class="card-title">Producto defendible</h3>
+                      <p class="body-copy">La propuesta no compite solo por detección, sino por confianza institucional.</p>
+                    </div>
+                  </div>
+                </div>
+                <div class="footer"><span>CertiVision SPGG</span><span>Slide 6 / 7</span></div>
+              </div>
+            </section>
+          `,
+        },
+        {
+          label: "07 Cierre",
+          html: `
+            <section class="slide-content panel">
+              <div class="panel-inner">
+                <span class="eyebrow">Cierre</span>
+                <h2 class="headline">No es un proyecto<br>de cámaras.<br>Es un proyecto de confianza.</h2>
+                <p class="subhead">CertiVision convierte vigilancia en una cadena visible: fuente, interpretación, alerta y evidencia. Eso es lo que hace defendible la operación pública.</p>
+                <div class="cta">
+                  <span class="pill">Menos opacidad</span>
+                  <span class="pill">Más reacción</span>
+                  <span class="pill">Más trazabilidad</span>
+                </div>
+                <div class="quote" style="margin-top:20px;">La corrupción necesita oscuridad y memoria selectiva. CertiVision elimina ambas.</div>
+                <div class="footer"><span>CertiVision SPGG</span><span>Slide 7 / 7</span></div>
+              </div>
+            </section>
+          `,
+        },
+      ];
 
-  const div = document.createElement('div');
-  div.className = 'slide' + (i === 0 ? ' active' : '');
-  div.id = 'slide-' + i;
-  div.innerHTML = s.html;
-  slidesEl.appendChild(div);
-});
-</script>
+      const navEl = document.getElementById("nav");
+      const slidesEl = document.getElementById("slides");
+
+      function activateSlide(index) {
+        document.querySelectorAll(".nav button").forEach((button, buttonIndex) => {
+          button.classList.toggle("active", buttonIndex === index);
+        });
+        document.querySelectorAll(".slide").forEach((slide, slideIndex) => {
+          slide.classList.toggle("active", slideIndex === index);
+        });
+      }
+
+      slides.forEach((slide, index) => {
+        const button = document.createElement("button");
+        button.textContent = slide.label;
+        if (index === 0) button.classList.add("active");
+        button.addEventListener("click", () => activateSlide(index));
+        navEl.appendChild(button);
+
+        const section = document.createElement("section");
+        section.className = `slide${index === 0 ? " active" : ""}`;
+        section.innerHTML = slide.html;
+        slidesEl.appendChild(section);
+      });
+    </script>
+  </body>
+</html>
