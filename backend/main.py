@@ -28,10 +28,11 @@ from .models import (
     SessionStopResponse,
     SessionSummary,
 )
-from .analyzer import analyze_frame_b64, can_use_real_ai, get_analyzer_config
+from .analyzer import analyze_frame_b64, analyze_video_file, can_use_real_ai, get_analyzer_config
 from .store import InMemoryStore, build_mock_frame
 
 load_dotenv()
+ROOT_DIR = Path(__file__).resolve().parent.parent
 
 app = FastAPI(title="CertiVision SPGG", version="0.1.0")
 app.add_middleware(
@@ -418,6 +419,9 @@ async def run_mock_pipeline(session_id: UUID) -> None:
             }
         )
         return
+    if session.request.source.value == "file" and session.request.source_path:
+        await run_video_file_pipeline(session_id)
+        return
     for frame_number in range(1, 600):
         session = await store.get_session(session_id)
         if not session or session.status != "ACTIVE":
@@ -449,6 +453,9 @@ async def run_mock_pipeline(session_id: UUID) -> None:
                         "model_interpretation": "Sin frame real disponible todavía.",
                         "recommended_action": "Verificar permisos de cámara, reproducción del video o bridge móvil.",
                         "incident_type": "NORMAL",
+                        "incident_family": "NORMAL",
+                        "scenario_label": "WAITING_FOR_VIDEO",
+                        "dispatch_target": "MONITOREO",
                         "severity": "LOW",
                         "confidence": 0,
                         "subjects_count": 0,
@@ -497,6 +504,9 @@ async def run_mock_pipeline(session_id: UUID) -> None:
                         "model_interpretation": last_analysis["description"] if last_analysis else fallback_description,
                         "recommended_action": last_analysis["recommended_action"] if last_analysis else "Esperar a que termine la ventana de backoff o reducir la frecuencia de pruebas.",
                         "incident_type": last_analysis["incident_type"] if last_analysis else "NORMAL",
+                        "incident_family": last_analysis["incident_family"] if last_analysis else "NORMAL",
+                        "scenario_label": last_analysis["scenario_label"] if last_analysis else "GEMINI_BACKOFF",
+                        "dispatch_target": last_analysis["dispatch_target"] if last_analysis else "MONITOREO",
                         "severity": last_analysis["severity"] if last_analysis else "LOW",
                         "confidence": last_analysis["confidence"] if last_analysis else 0,
                         "subjects_count": last_analysis["subjects_count"] if last_analysis else 0,
@@ -566,6 +576,9 @@ async def run_mock_pipeline(session_id: UUID) -> None:
                     "model_interpretation": current_analysis.description,
                     "recommended_action": current_analysis.recommended_action,
                     "incident_type": current_analysis.incident_type.value,
+                    "incident_family": current_analysis.incident_family.value,
+                    "scenario_label": current_analysis.scenario_label,
+                    "dispatch_target": current_analysis.dispatch_target,
                     "severity": current_analysis.severity.value,
                     "confidence": current_analysis.confidence,
                     "subjects_count": current_analysis.subjects_count,
@@ -614,6 +627,9 @@ async def run_mock_pipeline(session_id: UUID) -> None:
                     "model_interpretation": analysis.description,
                     "recommended_action": analysis.recommended_action,
                     "incident_type": analysis.incident_type.value,
+                    "incident_family": analysis.incident_family.value,
+                    "scenario_label": analysis.scenario_label,
+                    "dispatch_target": analysis.dispatch_target,
                     "severity": analysis.severity.value,
                     "confidence": analysis.confidence,
                     "subjects_count": analysis.subjects_count,
@@ -634,6 +650,136 @@ async def run_mock_pipeline(session_id: UUID) -> None:
                 },
             }
         )
+        await broadcast({"type": "INCIDENT_ALERT", "incident": incident.model_dump(mode="json")})
+
+
+async def run_video_file_pipeline(session_id: UUID) -> None:
+    session = await store.get_session(session_id)
+    if not session or not session.request.source_path:
+        return
+
+    local_path = Path(session.request.source_path.lstrip("/"))
+    if not local_path.exists():
+        local_path = ROOT_DIR / session.request.source_path.lstrip("/")
+    if not local_path.exists():
+        await broadcast(
+            {
+                "type": "ANALYSIS_ERROR",
+                "camera_label": session.request.camera_label,
+                "message": f"Video source not found locally: {session.request.source_path}",
+            }
+        )
+        return
+
+    await broadcast(
+        {
+            "type": "ANALYSIS_UPDATE",
+            "analysis": {
+                "session_id": str(session_id),
+                "camera_label": session.request.camera_label,
+                "source": session.request.source.value,
+                "source_path": session.request.source_path,
+                "frame_number": 0,
+                "frame_second": 0,
+                "status": "UPLOADING_VIDEO",
+                "frame_b64": build_mock_frame(
+                    session.request,
+                    0,
+                    "Subiendo video",
+                    "Gemini está recibiendo el archivo de video para analizarlo como video real.",
+                    "LOW",
+                ),
+                "model_interpretation": "Preparando analisis de video real con Gemini.",
+                "recommended_action": "Esperar a que Gemini procese el video.",
+                "incident_type": "NORMAL",
+                "incident_family": "NORMAL",
+                "scenario_label": "VIDEO_PROCESSING",
+                "dispatch_target": "MONITOREO",
+                "severity": "LOW",
+                "confidence": 0,
+                "subjects_count": 0,
+                "risk_level": "GREEN",
+                "ai_mode": "gemini_video",
+                "detection_basis": "gemini_video_upload",
+                "observed_signals": [],
+                "trigger_reason": "Se esta enviando el video completo a Gemini.",
+                "narrator_caption": "Procesando video real...",
+                "source_runtime": "file_stream",
+                "device_location": session.device_location.model_dump(mode="json") if session.device_location else None,
+            },
+        }
+    )
+
+    try:
+        analysis = await asyncio.to_thread(analyze_video_file, local_path)
+        await store.register_gemini_call(
+            session_id,
+            input_tokens=analysis.input_tokens,
+            output_tokens=analysis.output_tokens,
+            total_tokens=analysis.total_tokens,
+        )
+    except Exception as exc:
+        await broadcast(
+            {
+                "type": "ANALYSIS_ERROR",
+                "camera_label": session.request.camera_label,
+                "message": str(exc),
+            }
+        )
+        return
+
+    await store.register_frame(session_id)
+    await store.append_analysis_event(session_id, 1, analysis, "gemini_video", "gemini_video_file")
+    session = await store.get_session(session_id)
+    rate_state = await store.get_rate_control_state(session_id)
+    current_session = session or await store.get_session(session_id)
+    preview_frame = build_mock_frame(
+        current_session.request if current_session else session.request,
+        1,
+        analysis.scenario_label,
+        analysis.description,
+        analysis.severity.value,
+    )
+    await broadcast(
+        {
+            "type": "ANALYSIS_UPDATE",
+            "analysis": {
+                "session_id": str(session_id),
+                "camera_label": session.request.camera_label,
+                "source": session.request.source.value,
+                "source_path": session.request.source_path,
+                "frame_number": 1,
+                "frame_second": 1,
+                "status": "ANALYZING",
+                "frame_b64": preview_frame,
+                "model_interpretation": analysis.description,
+                "recommended_action": analysis.recommended_action,
+                "incident_type": analysis.incident_type.value,
+                "incident_family": analysis.incident_family.value,
+                "scenario_label": analysis.scenario_label,
+                "dispatch_target": analysis.dispatch_target,
+                "severity": analysis.severity.value,
+                "confidence": analysis.confidence,
+                "subjects_count": analysis.subjects_count,
+                "risk_level": analysis.risk_level,
+                "ai_mode": "gemini_video",
+                "detection_basis": "gemini_video_file",
+                "observed_signals": analysis.observed_signals,
+                "trigger_reason": analysis.trigger_reason,
+                "narrator_caption": analysis.narrator_caption or analysis.description,
+                "source_runtime": "file_stream",
+                "gemini_calls": (rate_state or {}).get("gemini_calls", 0),
+                "saved_calls": (rate_state or {}).get("saved_calls", 0),
+                "next_inference_at": (rate_state or {}).get("next_inference_at"),
+                "input_tokens": (rate_state or {}).get("input_tokens", 0),
+                "output_tokens": (rate_state or {}).get("output_tokens", 0),
+                "total_tokens": (rate_state or {}).get("total_tokens", 0),
+                "device_location": session.device_location.model_dump(mode="json") if session and session.device_location else None,
+            },
+        }
+    )
+    if analysis.has_incident:
+        incident = await store.add_incident(session_id, analysis)
         await broadcast({"type": "INCIDENT_ALERT", "incident": incident.model_dump(mode="json")})
 
 

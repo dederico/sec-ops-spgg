@@ -3,7 +3,9 @@ from __future__ import annotations
 import base64
 import json
 import os
+import time
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Literal
 
 from dotenv import load_dotenv
@@ -29,6 +31,13 @@ Guia de riesgo:
 - GREEN: observacion preventiva, bajo riesgo o sin daño inminente
 - YELLOW: riesgo moderado o situacion que requiere revision/intervencion preventiva
 - RED: riesgo alto, violencia, posible lesion, peligro inminente o amenaza seria a la comunidad
+"""
+
+VIDEO_PROMPT = """
+Analiza este video municipal y responde con el mismo esquema estructurado.
+Usa el contexto temporal del video, no solo una imagen aislada.
+Si detectas un evento relevante, apóyate en la secuencia y menciona señales visuales clave del momento más importante.
+Si el evento ocurre rápido, prioriza el instante de mayor riesgo.
 """
 
 
@@ -63,13 +72,15 @@ class AnalyzerConfig:
     enabled: bool
     model: str
     api_key_present: bool
+    video_fps: float
 
 
 def get_analyzer_config() -> AnalyzerConfig:
     enabled = os.getenv("ENABLE_REAL_AI", "").lower() == "true"
     model = os.getenv("GEMINI_MODEL", "gemini-2.5-pro")
     api_key_present = bool(os.getenv("GEMINI_API_KEY"))
-    return AnalyzerConfig(enabled=enabled, model=model, api_key_present=api_key_present)
+    video_fps = float(os.getenv("GEMINI_VIDEO_FPS", "1.0"))
+    return AnalyzerConfig(enabled=enabled, model=model, api_key_present=api_key_present, video_fps=video_fps)
 
 
 def can_use_real_ai() -> bool:
@@ -102,6 +113,74 @@ def analyze_frame_b64(frame_b64: str) -> AnalysisResult:
     output_tokens = int(getattr(usage, "candidates_token_count", 0) or 0)
     total_tokens = int(getattr(usage, "total_token_count", 0) or 0)
     return normalize_result(payload, input_tokens=input_tokens, output_tokens=output_tokens, total_tokens=total_tokens)
+
+
+def analyze_video_file(video_path: str | Path) -> AnalysisResult:
+    config = get_analyzer_config()
+    if not (config.enabled and config.api_key_present):
+        raise RuntimeError("Real AI is not enabled or GEMINI_API_KEY is missing")
+
+    path = Path(video_path)
+    if not path.exists():
+        raise FileNotFoundError(f"Video file not found: {path}")
+
+    client = genai.Client()
+    uploaded = client.files.upload(file=path, config={"mime_type": guess_video_mime_type(path)})
+    uploaded = wait_until_file_ready(client, uploaded.name)
+
+    response = client.models.generate_content(
+        model=config.model,
+        contents=[
+            types.Part(
+                file_data=types.FileData(
+                    file_uri=uploaded.uri,
+                    mime_type=uploaded.mime_type or guess_video_mime_type(path),
+                ),
+                video_metadata=types.VideoMetadata(fps=config.video_fps),
+            ),
+            VIDEO_PROMPT,
+        ],
+        config=types.GenerateContentConfig(
+            response_mime_type="application/json",
+            response_json_schema=StructuredAnalysisPayload.model_json_schema(),
+        ),
+    )
+    text = (response.text or "").strip()
+    payload = parse_json_payload(text)
+    usage = getattr(response, "usage_metadata", None)
+    input_tokens = int(getattr(usage, "prompt_token_count", 0) or 0)
+    output_tokens = int(getattr(usage, "candidates_token_count", 0) or 0)
+    total_tokens = int(getattr(usage, "total_token_count", 0) or 0)
+    return normalize_result(payload, input_tokens=input_tokens, output_tokens=output_tokens, total_tokens=total_tokens)
+
+
+def wait_until_file_ready(client: genai.Client, file_name: str, timeout_seconds: int = 120) -> types.File:
+    started_at = time.time()
+    while True:
+        current = client.files.get(name=file_name)
+        state_name = str(getattr(current.state, "name", current.state)).upper()
+        if "ACTIVE" in state_name:
+            return current
+        if "FAILED" in state_name or "ERROR" in state_name:
+            raise RuntimeError(f"Gemini file processing failed for {file_name}: {getattr(current, 'error', None)}")
+        if time.time() - started_at > timeout_seconds:
+            raise TimeoutError(f"Timed out waiting for Gemini to process video file: {file_name}")
+        time.sleep(2)
+
+
+def guess_video_mime_type(path: Path) -> str:
+    suffix = path.suffix.lower()
+    if suffix == ".mp4":
+        return "video/mp4"
+    if suffix == ".mov":
+        return "video/mov"
+    if suffix == ".avi":
+        return "video/avi"
+    if suffix == ".webm":
+        return "video/webm"
+    if suffix == ".mpeg" or suffix == ".mpg":
+        return "video/mpeg"
+    return "video/mp4"
 
 
 def decode_data_url(data_url: str) -> tuple[bytes, str]:
