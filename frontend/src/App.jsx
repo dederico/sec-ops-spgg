@@ -3,9 +3,224 @@ import { useEffect, useRef, useState } from "react";
 const API_URL = window.location.origin;
 const WS_PROTOCOL = window.location.protocol === "https:" ? "wss:" : "ws:";
 const WS_URL = `${WS_PROTOCOL}//${window.location.host}/ws`;
-const MOBILE_BRIDGE_URL = `${API_URL}/mobile-bridge`;
+
+const TRANSLATIONS = {
+  en: {
+    hackathonMvp: "Hackathon MVP",
+    heroTitle: "CertiVision SPGG",
+    heroLede: "Show the source, the model interpretation, and the exact moment when observation becomes an alert.",
+    livePriority: "LIVE ANALYSIS PRIORITY",
+    fileDemoMode: "File demo mode",
+    ahaMomentTag: "The AHA moment happens when the scene changes and the system verbalizes it",
+    singleEndpoint: "Single endpoint: open this same page on laptop and phone",
+    analyzedSource: "Analyzed Source",
+    waitingSession: "Waiting for a session",
+    alertTriggered: "ALERT TRIGGERED",
+    liveAnalysis: "LIVE ANALYSIS",
+    analyzing: "ANALYZING",
+    source: "Source",
+    pathOrStream: "Path or stream",
+    operatorLiveInput: "Operator live input",
+    observedSecond: "Observed second",
+    frame: "Frame",
+    modelInterpretation: "Model Interpretation",
+    interpretationPlaceholder: "The model reading of the current scene should appear here.",
+    confidence: "Confidence",
+    severity: "Severity",
+    risk: "Risk",
+    subjects: "Subjects",
+    family: "Family",
+    dispatch: "Dispatch",
+    inputTokens: "Input tokens",
+    outputTokens: "Output tokens",
+    totalTokens: "Total tokens",
+    recommendedAction: "Recommended action",
+    noRecommendation: "No recommendation yet.",
+    whyReported: "Why it reported this",
+    noReason: "No detailed justification yet.",
+    observedElements: "Observed signals",
+    ahaMoment: "AHA Moment",
+    noAlarmYet: "No alarm yet",
+    alarmPlaceholder: "When the model crosses the threshold, this card switches to critical and keeps the incident visible.",
+    state: "State",
+    observation: "Observation",
+    trigger: "Trigger",
+    waiting: "Waiting",
+    triggeredSecond: "Triggered second",
+    sceneSummary: "Scene summary",
+    noSummary: "No summary yet",
+    locationOps: "Location and Operational Response",
+    deviceLocation: "Device location",
+    noSharedLocation: "No shared location",
+    approxAccuracy: "Approx. accuracy: {meters} m",
+    locationSharedWhenAllowed: "Location is shared when the mobile source grants geolocation access.",
+    openInMaps: "Open location in map",
+    operationalSource: "Operational source",
+    noActiveSource: "No active source",
+    noSession: "No session",
+    system: "System",
+    integrity: "Integrity",
+    valid: "VALID",
+    pending: "PENDING",
+    captureThisDevice: "Capture on this device",
+    sameViewDevices: "Use this same view on both laptop and phone. No endpoint switching needed.",
+    cameraLabel: "Camera label",
+    useLaptopCamera: "Use this laptop camera",
+    usePhoneCamera: "Use this phone camera",
+    phoneNgrokHint: "If you open this page from the phone via ngrok, the phone button starts camera and analysis right here.",
+    externalVideos: "External Videos",
+    externalVideosHelp: "Upload a local file or download one from a public URL. Then trigger analysis from the list.",
+    uploadVideo: "Upload video",
+    downloadFromUrl: "Download from URL",
+    analyze: "Analyze",
+    sessions: "Sessions",
+    sessionExplorer: "Session Explorer",
+    sessionsHelp: "Open each session, inspect what the model interpreted, and read the full sequence without opening JSON.",
+    frames: "frames",
+    incidents: "incidents",
+    noSessions: "No sessions recorded yet.",
+    selectedSession: "Selected session",
+    stopSession: "Stop session",
+    refreshLog: "Refresh history",
+    started: "Started",
+    analyzedFrames: "Analyzed frames",
+    detectedIncidents: "Detected incidents",
+    geminiCalls: "Gemini calls",
+    savedCalls: "Saved calls",
+    sharedLocation: "Shared location",
+    noLocation: "No location",
+    nextInference: "Next inference",
+    noWait: "No wait",
+    sessionInterpretations: "Session interpretations",
+    visibleRecords: "{count} visible records",
+    noSessionInterpretations: "This session does not have saved interpretations yet.",
+    selectSession: "Select a session to inspect its interpretations.",
+    recentActivity: "Recent Activity",
+    incidentTimeline: "Incident Timeline",
+    sourceWebcam: "Webcam / Live feed",
+    sourceMobile: "Phone / Live bridge",
+    sourceRtsp: "IP camera",
+    sourceFile: "Video file",
+    heartbeat: "System heartbeat",
+    analyzingSource: "Analyzing {source}",
+    detectedSuffix: "detected",
+    camera: "Camera",
+    statusWord: "Status",
+    analysisError: "Analysis error on {camera}",
+    systemEvent: "System event",
+    sharedLocationLabel: "Location shared from this device",
+    startDemoToSee: "Start a demo to see live interpretation.",
+  },
+  es: {
+    hackathonMvp: "Hackathon MVP",
+    heroTitle: "CertiVision SPGG",
+    heroLede: "Mostrar la fuente, la interpretación del modelo y el instante exacto en que se convierte en alerta.",
+    livePriority: "LIVE ANALYSIS PRIORITARIO",
+    fileDemoMode: "Modo demo por archivo",
+    ahaMomentTag: "El AHA moment ocurre cuando la escena cambia y el sistema lo verbaliza",
+    singleEndpoint: "Endpoint único: abre esta misma página en laptop y celular",
+    analyzedSource: "Fuente Analizada",
+    waitingSession: "Esperando una sesión",
+    alertTriggered: "ALERTA DISPARADA",
+    liveAnalysis: "LIVE ANALYSIS",
+    analyzing: "ANALIZANDO",
+    source: "Origen",
+    pathOrStream: "Ruta o stream",
+    operatorLiveInput: "Entrada en vivo del operador",
+    observedSecond: "Segundo observado",
+    frame: "Frame",
+    modelInterpretation: "Interpretación del modelo",
+    interpretationPlaceholder: "Aquí debe aparecer la lectura del modelo sobre lo que está viendo en la escena.",
+    confidence: "Confianza",
+    severity: "Severidad",
+    risk: "Riesgo",
+    subjects: "Sujetos",
+    family: "Familia",
+    dispatch: "Despacho",
+    inputTokens: "Tokens entrada",
+    outputTokens: "Tokens salida",
+    totalTokens: "Tokens total",
+    recommendedAction: "Acción recomendada",
+    noRecommendation: "Sin recomendación todavía.",
+    whyReported: "Por qué lo reporta",
+    noReason: "Sin justificación detallada todavía.",
+    observedElements: "Elementos observados",
+    ahaMoment: "AHA Moment",
+    noAlarmYet: "Sin alarma aún",
+    alarmPlaceholder: "Cuando el modelo cruce el umbral, esta tarjeta cambia a estado crítico y deja visible el incidente.",
+    state: "Estado",
+    observation: "Observación",
+    trigger: "Detonante",
+    waiting: "Esperando",
+    triggeredSecond: "Segundo disparado",
+    sceneSummary: "Resumen de escena",
+    noSummary: "Sin resumen todavía",
+    locationOps: "Ubicación y Respuesta Operativa",
+    deviceLocation: "Ubicación del dispositivo",
+    noSharedLocation: "Sin ubicación compartida",
+    approxAccuracy: "Precisión aproximada: {meters} m",
+    locationSharedWhenAllowed: "La ubicación se comparte cuando la fuente móvil autoriza geolocalización.",
+    openInMaps: "Abrir ubicación en mapa",
+    operationalSource: "Fuente operativa",
+    noActiveSource: "Sin fuente activa",
+    noSession: "Sin sesión",
+    system: "Sistema",
+    integrity: "Integridad",
+    valid: "VALIDA",
+    pending: "PENDIENTE",
+    captureThisDevice: "Captura en este dispositivo",
+    sameViewDevices: "Usa esta misma vista tanto en laptop como en celular. Ya no necesitas cambiar de endpoint.",
+    cameraLabel: "Etiqueta de cámara",
+    useLaptopCamera: "Usar cámara de esta laptop",
+    usePhoneCamera: "Usar cámara de este celular",
+    phoneNgrokHint: "Si abres esta página desde el teléfono por ngrok, el botón de celular inicia cámara y análisis aquí mismo.",
+    externalVideos: "Videos externos",
+    externalVideosHelp: "Sube un archivo local o descarga uno desde una URL pública. Luego puedes disparar el análisis desde la lista.",
+    uploadVideo: "Subir video",
+    downloadFromUrl: "Descargar desde URL",
+    analyze: "Analizar",
+    sessions: "Sesiones",
+    sessionExplorer: "Explorador de sesiones",
+    sessionsHelp: "Aquí puedes entrar a cada sesión, ver qué interpretó el modelo y leer la secuencia completa sin abrir JSON.",
+    frames: "frames",
+    incidents: "incidentes",
+    noSessions: "Todavía no hay sesiones registradas.",
+    selectedSession: "Sesión seleccionada",
+    stopSession: "Detener sesión",
+    refreshLog: "Actualizar bitácora",
+    started: "Inició",
+    analyzedFrames: "Frames analizados",
+    detectedIncidents: "Incidentes detectados",
+    geminiCalls: "Llamadas a Gemini",
+    savedCalls: "Llamadas ahorradas",
+    sharedLocation: "Ubicación compartida",
+    noLocation: "Sin ubicación",
+    nextInference: "Siguiente inferencia",
+    noWait: "Sin espera",
+    sessionInterpretations: "Interpretaciones de la sesión",
+    visibleRecords: "{count} registros visibles",
+    noSessionInterpretations: "Esta sesión todavía no tiene interpretaciones guardadas.",
+    selectSession: "Selecciona una sesión para ver sus interpretaciones.",
+    recentActivity: "Actividad Reciente",
+    incidentTimeline: "Timeline de Incidentes",
+    sourceWebcam: "Webcam / Live feed",
+    sourceMobile: "Celular / Live bridge",
+    sourceRtsp: "Cámara IP",
+    sourceFile: "Archivo de video",
+    heartbeat: "Heartbeat del sistema",
+    analyzingSource: "Analizando {source}",
+    detectedSuffix: "detectado",
+    camera: "Camara",
+    statusWord: "Estado",
+    analysisError: "Error de análisis en {camera}",
+    systemEvent: "Evento del sistema",
+    sharedLocationLabel: "Ubicación compartida desde este dispositivo",
+    startDemoToSee: "Inicia una demo para ver la interpretación en vivo.",
+  },
+};
 
 function App() {
+  const [language, setLanguage] = useState(() => localStorage.getItem("certivision-language") || "en");
   const [health, setHealth] = useState(null);
   const [sessions, setSessions] = useState([]);
   const [incidents, setIncidents] = useState([]);
@@ -31,6 +246,15 @@ function App() {
   const [activeMediaUrl, setActiveMediaUrl] = useState("");
   const [activeMediaType, setActiveMediaType] = useState("");
   const deviceLocationRef = useRef(null);
+  const dictionary = TRANSLATIONS[language] || TRANSLATIONS.en;
+
+  function t(key, params = {}) {
+    const template = dictionary[key] || TRANSLATIONS.en[key] || key;
+    return Object.entries(params).reduce(
+      (text, [paramKey, value]) => text.replaceAll(`{${paramKey}}`, String(value)),
+      template,
+    );
+  }
 
   async function refreshAll() {
     const [healthResponse, sessionsResponse, incidentsResponse, auditResponse, sourcesResponse] = await Promise.all([
@@ -48,15 +272,15 @@ function App() {
   }
 
   function sourceLabel(source) {
-    if (source === "webcam") return "Webcam / Live feed";
-    if (source === "mobile") return "Celular / Live bridge";
-    if (source === "rtsp") return "Cámara IP";
-    return "Archivo de video";
+    if (source === "webcam") return t("sourceWebcam");
+    if (source === "mobile") return t("sourceMobile");
+    if (source === "rtsp") return t("sourceRtsp");
+    return t("sourceFile");
   }
 
   function formatDateTime(value) {
     if (!value) return "--";
-    return new Date(value).toLocaleString();
+    return new Date(value).toLocaleString(language === "es" ? "es-MX" : "en-US");
   }
 
   function formatCoords(location) {
@@ -84,7 +308,7 @@ function App() {
             longitude: position.coords.longitude,
             accuracy_meters: position.coords.accuracy,
             shared_at: new Date().toISOString(),
-            label: "Ubicación compartida desde este dispositivo",
+            label: t("sharedLocationLabel"),
           }),
         () => resolve(null),
         { enableHighAccuracy: true, timeout: 8000, maximumAge: 15000 },
@@ -105,13 +329,13 @@ function App() {
       if (payload.analysis.status === "INCIDENT_DETECTED") {
         return {
           tone: "alert",
-          title: `${scenario} detectado`,
+          title: `${scenario} ${t("detectedSuffix")}`,
           detail: `${source} · t=${second}s · ${payload.analysis.trigger_reason || payload.analysis.model_interpretation}`,
         };
       }
       return {
         tone: "info",
-        title: `Analizando ${source}`,
+        title: t("analyzingSource", { source }),
         detail: `t=${second}s · ${basis} · ${payload.analysis.narrator_caption || payload.analysis.model_interpretation}`,
       };
     }
@@ -125,30 +349,37 @@ function App() {
     if (payload.type === "CAMERA_STATUS") {
       return {
         tone: payload.status === "ACTIVE" ? "info" : "neutral",
-        title: `Camara ${payload.source_id}`,
-        detail: `Estado ${payload.status}${payload.source_path ? ` · ${payload.source_path}` : ""}`,
+        title: `${t("camera")} ${payload.source_id}`,
+        detail: `${t("statusWord")} ${payload.status}${payload.source_path ? ` · ${payload.source_path}` : ""}`,
       };
     }
     if (payload.type === "ANALYSIS_ERROR") {
       return {
         tone: "alert",
-        title: `Error de analisis en ${payload.camera_label}`,
+        title: t("analysisError", { camera: payload.camera_label }),
         detail: payload.message,
       };
     }
     if (payload.type === "HEARTBEAT") {
       return {
         tone: "neutral",
-        title: "Heartbeat del sistema",
-        detail: `${payload.cameras_active} camaras activas · ${payload.frames_analyzed} frames analizados`,
+        title: t("heartbeat"),
+        detail:
+          language === "es"
+            ? `${payload.cameras_active} cámaras activas · ${payload.frames_analyzed} frames analizados`
+            : `${payload.cameras_active} active cameras · ${payload.frames_analyzed} analyzed frames`,
       };
     }
     return {
       tone: "neutral",
       title: payload.type,
-      detail: "Evento del sistema",
+      detail: t("systemEvent"),
     };
   }
+
+  useEffect(() => {
+    localStorage.setItem("certivision-language", language);
+  }, [language]);
 
   async function refreshHistory(sessionId) {
     if (!sessionId) {
@@ -449,7 +680,7 @@ function App() {
       return <video ref={fileVideoRef} className="hero-frame" controls autoPlay muted playsInline />;
     }
     if (!latestAnalysis) {
-      return <div className="empty-frame">Inicia una demo para ver la interpretación en vivo.</div>;
+      return <div className="empty-frame">{t("startDemoToSee")}</div>;
     }
     return <img src={latestAnalysis.frame_b64} alt={latestAnalysis.incident_type} className="hero-frame" />;
   }
@@ -463,19 +694,35 @@ function App() {
     <main className="shell">
       <canvas ref={captureCanvasRef} className="hidden-canvas" />
       <section className="hero">
-        <p className="eyebrow">Hackathon MVP</p>
-        <h1>CertiVision SPGG</h1>
-        <p className="lede">
-          Mostrar la fuente, la interpretación del modelo y el instante exacto en que se convierte en alerta.
-        </p>
+        <div className="hero-topbar">
+          <div>
+            <p className="eyebrow">{t("hackathonMvp")}</p>
+            <h1>{t("heroTitle")}</h1>
+          </div>
+          <div className="language-switch" role="tablist" aria-label="Language switch">
+            <button
+              type="button"
+              className={language === "en" ? "lang-active" : "lang-idle"}
+              onClick={() => setLanguage("en")}
+            >
+              EN
+            </button>
+            <button
+              type="button"
+              className={language === "es" ? "lang-active" : "lang-idle"}
+              onClick={() => setLanguage("es")}
+            >
+              ES
+            </button>
+          </div>
+        </div>
+        <p className="lede">{t("heroLede")}</p>
         <div className="hero-badges">
           <span className={`hero-pill ${liveMode ? "hero-pill-live" : ""}`}>
-            {liveMode ? "LIVE ANALYSIS PRIORITARIO" : "Modo demo por archivo"}
+            {liveMode ? t("livePriority") : t("fileDemoMode")}
           </span>
-          <span className="hero-pill">El AHA moment ocurre cuando la escena cambia y el sistema lo verbaliza</span>
-          <span className="hero-pill">
-            Endpoint unico: abre esta misma pagina en laptop y celular
-          </span>
+          <span className="hero-pill">{t("ahaMomentTag")}</span>
+          <span className="hero-pill">{t("singleEndpoint")}</span>
         </div>
       </section>
 
@@ -483,17 +730,17 @@ function App() {
         <article className="stage-card">
           <div className="stage-header">
             <div>
-              <p className="section-kicker">Fuente Analizada</p>
+              <p className="section-kicker">{t("analyzedSource")}</p>
               <h2>
-                {latestAnalysis ? latestAnalysis.camera_label : "Esperando una sesión"}
+                {latestAnalysis ? latestAnalysis.camera_label : t("waitingSession")}
               </h2>
             </div>
             <span className={`status-pill ${latestAnalysis?.status === "INCIDENT_DETECTED" ? "danger" : "live"}`}>
               {latestAnalysis?.status === "INCIDENT_DETECTED"
-                ? "ALERTA DISPARADA"
+                ? t("alertTriggered")
                 : latestAnalysis?.source === "webcam"
-                  ? "LIVE ANALYSIS"
-                  : "ANALIZANDO"}
+                  ? t("liveAnalysis")
+                  : t("analyzing")}
             </span>
           </div>
           <div className="frame-shell">
@@ -513,87 +760,78 @@ function App() {
           </div>
           <div className="source-meta">
             <div>
-              <span>Origen</span>
-              <strong>
-                {latestAnalysis?.source === "webcam"
-                  ? "Webcam / Live feed"
-                  : latestAnalysis?.source === "mobile"
-                    ? "Celular / Live bridge"
-                    : latestAnalysis?.source === "rtsp"
-                      ? "Cámara IP"
-                    : "Archivo de video"}
-              </strong>
+              <span>{t("source")}</span>
+              <strong>{latestAnalysis ? sourceLabel(latestAnalysis.source) : t("noActiveSource")}</strong>
             </div>
             <div>
-              <span>Ruta o stream</span>
-              <strong>{latestAnalysis?.source_path || "Entrada en vivo del operador"}</strong>
+              <span>{t("pathOrStream")}</span>
+              <strong>{latestAnalysis?.source_path || t("operatorLiveInput")}</strong>
             </div>
             <div>
-              <span>Segundo observado</span>
+              <span>{t("observedSecond")}</span>
               <strong>{latestAnalysis?.frame_second ?? 0}s</strong>
             </div>
             <div>
-              <span>Frame</span>
+              <span>{t("frame")}</span>
               <strong>{latestAnalysis?.frame_number || 0}</strong>
             </div>
           </div>
         </article>
 
         <article className="aha-card">
-          <p className="section-kicker">Interpretación del modelo</p>
+          <p className="section-kicker">{t("modelInterpretation")}</p>
           <h2>{latestAnalysis?.scenario_label || latestAnalysis?.incident_type || "NORMAL"}</h2>
           <p className="aha-copy">
-            {latestAnalysis?.model_interpretation ||
-              "Aquí debe aparecer la lectura del modelo sobre lo que está viendo en la escena."}
+            {latestAnalysis?.model_interpretation || t("interpretationPlaceholder")}
           </p>
           <div className="metrics">
             <div>
-              <span>Confianza</span>
+              <span>{t("confidence")}</span>
               <strong>{latestAnalysis ? `${Math.round(latestAnalysis.confidence * 100)}%` : "--"}</strong>
             </div>
             <div>
-              <span>Severidad</span>
+              <span>{t("severity")}</span>
               <strong>{latestAnalysis?.severity || "--"}</strong>
             </div>
             <div>
-              <span>Riesgo</span>
+              <span>{t("risk")}</span>
               <strong>{latestAnalysis?.risk_level || "--"}</strong>
             </div>
             <div>
-              <span>Sujetos</span>
+              <span>{t("subjects")}</span>
               <strong>{latestAnalysis?.subjects_count ?? "--"}</strong>
             </div>
             <div>
-              <span>Familia</span>
+              <span>{t("family")}</span>
               <strong>{latestAnalysis?.incident_family || "--"}</strong>
             </div>
             <div>
-              <span>Despacho</span>
+              <span>{t("dispatch")}</span>
               <strong>{latestAnalysis?.dispatch_target || "--"}</strong>
             </div>
             <div>
-              <span>Tokens entrada</span>
+              <span>{t("inputTokens")}</span>
               <strong>{latestAnalysis?.input_tokens ?? "--"}</strong>
             </div>
             <div>
-              <span>Tokens salida</span>
+              <span>{t("outputTokens")}</span>
               <strong>{latestAnalysis?.output_tokens ?? "--"}</strong>
             </div>
             <div>
-              <span>Tokens total</span>
+              <span>{t("totalTokens")}</span>
               <strong>{latestAnalysis?.total_tokens ?? "--"}</strong>
             </div>
           </div>
           <div className="recommendation">
-            <span>Acción recomendada</span>
-            <p>{latestAnalysis?.recommended_action || "Sin recomendación todavía."}</p>
+            <span>{t("recommendedAction")}</span>
+            <p>{latestAnalysis?.recommended_action || t("noRecommendation")}</p>
           </div>
           <div className="recommendation">
-            <span>Por qué lo reporta</span>
-            <p>{latestAnalysis?.trigger_reason || "Sin justificación detallada todavía."}</p>
+            <span>{t("whyReported")}</span>
+            <p>{latestAnalysis?.trigger_reason || t("noReason")}</p>
           </div>
           <div className="signals-block">
-            <span>Elementos observados</span>
+            <span>{t("observedElements")}</span>
             <ul className="signals-list">
               {(latestAnalysis?.observed_signals || []).map((signal) => (
                 <li key={signal}>{signal}</li>
@@ -603,28 +841,28 @@ function App() {
         </article>
 
         <article className={`alarm-card ${latestAlert ? "alarm-on" : ""}`}>
-          <p className="section-kicker">AHA Moment</p>
-          <h2>{latestAlert ? `${latestAlert.scenario_label || latestAlert.incident_type} detectado` : "Sin alarma aún"}</h2>
+          <p className="section-kicker">{t("ahaMoment")}</p>
+          <h2>{latestAlert ? `${latestAlert.scenario_label || latestAlert.incident_type} ${t("detectedSuffix")}` : t("noAlarmYet")}</h2>
           <p className="aha-copy">
             {latestAlert
               ? latestAlert.description
-              : "Cuando el modelo cruce el umbral, esta tarjeta cambia a estado crítico y deja visible el incidente."}
+              : t("alarmPlaceholder")}
           </p>
           <div className="alarm-strip">
-            <span>Estado</span>
-            <strong>{latestAlert ? `${latestAlert.risk_level} · ${latestAlert.severity}` : "Observación"}</strong>
+            <span>{t("state")}</span>
+            <strong>{latestAlert ? `${latestAlert.risk_level} · ${latestAlert.severity}` : t("observation")}</strong>
           </div>
           <div className="alarm-strip">
-            <span>Detonante</span>
-            <strong>{latestAlert ? `${Math.round(latestAlert.confidence * 100)}% confianza` : "Esperando"}</strong>
+            <span>{t("trigger")}</span>
+            <strong>{latestAlert ? `${Math.round(latestAlert.confidence * 100)}% ${t("confidence").toLowerCase()}` : t("waiting")}</strong>
           </div>
           <div className="alarm-strip">
-            <span>Segundo disparado</span>
+            <span>{t("triggeredSecond")}</span>
             <strong>{latestAlert?.detected_at_second ?? "--"}s</strong>
           </div>
           <div className="alarm-strip">
-            <span>Resumen de escena</span>
-            <strong>{latestAlert?.scene_summary || "Sin resumen todavía"}</strong>
+            <span>{t("sceneSummary")}</span>
+            <strong>{latestAlert?.scene_summary || t("noSummary")}</strong>
           </div>
         </article>
       </section>
@@ -632,38 +870,38 @@ function App() {
       <section className={`operations-strip ${riskClass(activeRiskLevel)}`}>
         <div className="operations-head">
           <div>
-            <p className="section-kicker">Ubicación y Respuesta Operativa</p>
+            <p className="section-kicker">{t("locationOps")}</p>
             <h2>{activeScenario}</h2>
           </div>
           <span className={`status-pill ${activeRiskLevel === "RED" ? "danger" : "live"}`}>{activeRiskLevel}</span>
         </div>
         <div className="operations-grid">
           <div>
-            <span>Ubicación del dispositivo</span>
-            <strong>{activeLocation ? formatCoords(activeLocation) : "Sin ubicación compartida"}</strong>
+            <span>{t("deviceLocation")}</span>
+            <strong>{activeLocation ? formatCoords(activeLocation) : t("noSharedLocation")}</strong>
             <p className="helper-copy">
               {activeLocation
-                ? `Precisión aproximada: ${Math.round(activeLocation.accuracy_meters || 0)} m`
-                : "La ubicación se comparte cuando la fuente móvil autoriza geolocalización."}
+                ? t("approxAccuracy", { meters: Math.round(activeLocation.accuracy_meters || 0) })
+                : t("locationSharedWhenAllowed")}
             </p>
             {activeLocation ? (
               <a href={`https://maps.google.com/?q=${activeLocation.latitude},${activeLocation.longitude}`} target="_blank" rel="noreferrer">
-                Abrir ubicación en mapa
+                {t("openInMaps")}
               </a>
             ) : null}
           </div>
           <div>
-            <span>Acción recomendada</span>
-            <strong>{latestAnalysis?.recommended_action || latestAlert?.recommended_action || "Continuar monitoreo."}</strong>
+            <span>{t("recommendedAction")}</span>
+            <strong>{latestAnalysis?.recommended_action || latestAlert?.recommended_action || (language === "es" ? "Continuar monitoreo." : "Continue monitoring.")}</strong>
             <p className="helper-copy">
               {latestAnalysis?.dispatch_target || latestAlert?.dispatch_target || "MONITOREO"} · {latestAnalysis?.incident_family || latestAlert?.incident_family || "NORMAL"}
             </p>
           </div>
           <div>
-            <span>Fuente operativa</span>
-            <strong>{latestAnalysis ? sourceLabel(latestAnalysis.source) : "Sin fuente activa"}</strong>
+            <span>{t("operationalSource")}</span>
+            <strong>{latestAnalysis ? sourceLabel(latestAnalysis.source) : t("noActiveSource")}</strong>
             <p className="helper-copy">
-              {latestAnalysis?.camera_label || selectedSession?.camera_label || "Sin sesión"} · {latestAnalysis?.source_path || selectedSession?.source_path || "stream en vivo"}
+              {latestAnalysis?.camera_label || selectedSession?.camera_label || t("noSession")} · {latestAnalysis?.source_path || selectedSession?.source_path || "live stream"}
             </p>
           </div>
         </div>
@@ -671,7 +909,7 @@ function App() {
 
       <section className="grid">
         <article className="card">
-          <h2>Sistema</h2>
+          <h2>{t("system")}</h2>
           <div className="system-grid">
             <div>
               <span>API</span>
@@ -690,55 +928,51 @@ function App() {
               <strong>{health?.ai_mode || "--"}</strong>
             </div>
             <div>
-              <span>Integridad</span>
-              <strong>{audit?.integrity_valid ? "VALIDA" : "PENDIENTE"}</strong>
+              <span>{t("integrity")}</span>
+              <strong>{audit?.integrity_valid ? t("valid") : t("pending")}</strong>
             </div>
           </div>
         </article>
 
         <article className="card">
-          <h2>Captura en este dispositivo</h2>
-          <p className="helper-copy">
-            Usa esta misma vista tanto en laptop como en celular. Ya no necesitas cambiar de endpoint.
-          </p>
+          <h2>{t("captureThisDevice")}</h2>
+          <p className="helper-copy">{t("sameViewDevices")}</p>
           <div className="actions">
             <input
               className="app-input"
               value={activeCameraLabel}
               onChange={(event) => setActiveCameraLabel(event.target.value)}
-              placeholder="Etiqueta de camara"
+              placeholder={t("cameraLabel")}
             />
-            <button onClick={() => startThisDeviceCamera("webcam")}>Usar cámara de esta laptop</button>
-            <button onClick={() => startThisDeviceCamera("mobile")}>Usar cámara de este celular</button>
+            <button onClick={() => startThisDeviceCamera("webcam")}>{t("useLaptopCamera")}</button>
+            <button onClick={() => startThisDeviceCamera("mobile")}>{t("usePhoneCamera")}</button>
           </div>
-          <p className="helper-copy">
-            Si abres esta página desde el teléfono por `ngrok`, el botón de celular inicia cámara y análisis aquí mismo.
-          </p>
+          <p className="helper-copy">{t("phoneNgrokHint")}</p>
           <div className="frame-shell compact">
             <video ref={localVideoRef} className="hero-frame" autoPlay muted playsInline />
           </div>
         </article>
 
         <article className="card">
-          <h2>Videos externos</h2>
-          <p className="helper-copy">Sube un archivo local o descarga uno desde una URL publica. Luego puedes disparar el analisis desde la lista.</p>
+          <h2>{t("externalVideos")}</h2>
+          <p className="helper-copy">{t("externalVideosHelp")}</p>
           <div className="stacked-actions">
             <input className="app-input" type="file" accept="video/*" onChange={(event) => setSelectedFile(event.target.files?.[0] || null)} />
-            <button onClick={uploadVideo} disabled={!selectedFile}>Subir video</button>
+            <button onClick={uploadVideo} disabled={!selectedFile}>{t("uploadVideo")}</button>
             <input
               className="app-input"
               value={importUrl}
               onChange={(event) => setImportUrl(event.target.value)}
               placeholder="https://.../video.mp4"
             />
-            <button onClick={importVideoUrl} disabled={!importUrl.trim()}>Descargar desde URL</button>
+            <button onClick={importVideoUrl} disabled={!importUrl.trim()}>{t("downloadFromUrl")}</button>
           </div>
           <ul className="list source-list">
             {sources.map((source) => (
               <li key={source.path}>
                 <div className="session-head">
                   <strong>{source.name}</strong>
-                  <button onClick={() => startUploadedSource(source.path, source.name)}>Analizar</button>
+                  <button onClick={() => startUploadedSource(source.path, source.name)}>{t("analyze")}</button>
                 </div>
                 <div>{source.path}</div>
                 <div>{Math.round(source.size_bytes / 1024)} KB</div>
@@ -751,12 +985,10 @@ function App() {
       <section className="sessions-section">
         <div className="section-headline">
           <div>
-            <p className="section-kicker">Sesiones</p>
-            <h2>Explorador de sesiones</h2>
+            <p className="section-kicker">{t("sessions")}</p>
+            <h2>{t("sessionExplorer")}</h2>
           </div>
-          <p className="helper-copy">
-            Aquí puedes entrar a cada sesión, ver qué interpretó el modelo y leer la secuencia completa sin abrir JSON.
-          </p>
+          <p className="helper-copy">{t("sessionsHelp")}</p>
         </div>
         <div className="sessions-layout">
           <aside className="session-rail">
@@ -775,14 +1007,14 @@ function App() {
                     {sourceLabel(session.source)} · {session.source_path || "live"}
                   </div>
                   <div className="session-tab-stats">
-                    <span>{session.frames_analyzed} frames</span>
-                    <span>{session.incidents_detected} incidentes</span>
+                    <span>{session.frames_analyzed} {t("frames")}</span>
+                    <span>{session.incidents_detected} {t("incidents")}</span>
                     <span>{session.total_tokens} tokens</span>
                   </div>
                 </button>
               ))
             ) : (
-              <div className="empty-session-state">Todavía no hay sesiones registradas.</div>
+              <div className="empty-session-state">{t("noSessions")}</div>
             )}
           </aside>
 
@@ -791,76 +1023,76 @@ function App() {
               <>
                 <div className="session-detail-header">
                   <div>
-                    <p className="section-kicker">Sesión seleccionada</p>
+                    <p className="section-kicker">{t("selectedSession")}</p>
                     <h3>{selectedSession.camera_label}</h3>
                   </div>
                   <div className="session-detail-actions">
                     {selectedSession.status === "ACTIVE" ? (
-                      <button onClick={() => stopSession(selectedSession.session_id)}>Detener sesión</button>
+                      <button onClick={() => stopSession(selectedSession.session_id)}>{t("stopSession")}</button>
                     ) : null}
-                    <button onClick={() => refreshHistory(selectedSession.session_id)}>Actualizar bitácora</button>
+                    <button onClick={() => refreshHistory(selectedSession.session_id)}>{t("refreshLog")}</button>
                   </div>
                 </div>
 
                 <div className="session-detail-grid">
                   <div>
-                    <span>Origen</span>
+                    <span>{t("source")}</span>
                     <strong>{sourceLabel(selectedSession.source)}</strong>
                   </div>
                   <div>
-                    <span>Ruta o stream</span>
-                    <strong>{selectedSession.source_path || "Entrada en vivo del operador"}</strong>
+                    <span>{t("pathOrStream")}</span>
+                    <strong>{selectedSession.source_path || t("operatorLiveInput")}</strong>
                   </div>
                   <div>
-                    <span>Inició</span>
+                    <span>{t("started")}</span>
                     <strong>{formatDateTime(selectedSession.started_at)}</strong>
                   </div>
                   <div>
-                    <span>Estado</span>
+                    <span>{t("state")}</span>
                     <strong>{selectedSession.status}</strong>
                   </div>
                   <div>
-                    <span>Frames analizados</span>
+                    <span>{t("analyzedFrames")}</span>
                     <strong>{selectedSession.frames_analyzed}</strong>
                   </div>
                   <div>
-                    <span>Incidentes detectados</span>
+                    <span>{t("detectedIncidents")}</span>
                     <strong>{selectedSession.incidents_detected}</strong>
                   </div>
                   <div>
-                    <span>Llamadas a Gemini</span>
+                    <span>{t("geminiCalls")}</span>
                     <strong>{selectedSession.gemini_calls}</strong>
                   </div>
                   <div>
-                    <span>Llamadas ahorradas</span>
+                    <span>{t("savedCalls")}</span>
                     <strong>{selectedSession.saved_calls}</strong>
                   </div>
                   <div>
-                    <span>Tokens de entrada</span>
+                    <span>{t("inputTokens")}</span>
                     <strong>{selectedSession.input_tokens}</strong>
                   </div>
                   <div>
-                    <span>Tokens de salida</span>
+                    <span>{t("outputTokens")}</span>
                     <strong>{selectedSession.output_tokens}</strong>
                   </div>
                   <div>
-                    <span>Tokens totales</span>
+                    <span>{t("totalTokens")}</span>
                     <strong>{selectedSession.total_tokens}</strong>
                   </div>
                   <div>
-                    <span>Ubicación compartida</span>
-                    <strong>{selectedSession.device_location ? formatCoords(selectedSession.device_location) : "Sin ubicación"}</strong>
+                    <span>{t("sharedLocation")}</span>
+                    <strong>{selectedSession.device_location ? formatCoords(selectedSession.device_location) : t("noLocation")}</strong>
                   </div>
                   <div>
-                    <span>Siguiente inferencia</span>
-                    <strong>{selectedSession.next_inference_at ? formatDateTime(selectedSession.next_inference_at) : "Sin espera"}</strong>
+                    <span>{t("nextInference")}</span>
+                    <strong>{selectedSession.next_inference_at ? formatDateTime(selectedSession.next_inference_at) : t("noWait")}</strong>
                   </div>
                 </div>
 
                 <div className="session-narrative">
                   <div className="session-head">
-                    <h3>Interpretaciones de la sesión</h3>
-                    <span>{analysisHistory.length} registros visibles</span>
+                    <h3>{t("sessionInterpretations")}</h3>
+                    <span>{t("visibleRecords", { count: analysisHistory.length })}</span>
                   </div>
                   <ul className="list narrative-list">
                     {analysisHistory.length ? (
@@ -891,13 +1123,13 @@ function App() {
                         </li>
                       ))
                     ) : (
-                      <li>Esta sesión todavía no tiene interpretaciones guardadas.</li>
+                      <li>{t("noSessionInterpretations")}</li>
                     )}
                   </ul>
                 </div>
               </>
             ) : (
-              <div className="empty-session-state">Selecciona una sesión para ver sus interpretaciones.</div>
+              <div className="empty-session-state">{t("selectSession")}</div>
             )}
           </div>
         </div>
@@ -905,7 +1137,7 @@ function App() {
 
       <section className="grid">
         <article className="card">
-          <h2>Actividad Reciente</h2>
+          <h2>{t("recentActivity")}</h2>
           <ul className="list">
             {activityFeed.map((event, index) => (
               <li key={`${event.title}-${index}`} className={`activity-item activity-${event.tone}`}>
@@ -921,7 +1153,7 @@ function App() {
       </section>
 
       <section className="card">
-        <h2>Timeline de Incidentes</h2>
+        <h2>{t("incidentTimeline")}</h2>
         <div className="incident-grid">
           {incidents.map((incident) => (
             <article key={incident.id} className="incident">
@@ -932,7 +1164,7 @@ function App() {
                 </p>
                 <p>{incident.description}</p>
                 <small>
-                  {incident.source_id} · {Math.round(incident.confidence * 100)}% confianza
+                  {incident.source_id} · {Math.round(incident.confidence * 100)}% {t("confidence").toLowerCase()}
                 </small>
               </div>
             </article>
