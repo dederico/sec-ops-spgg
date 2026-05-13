@@ -18,26 +18,36 @@ from .models import AnalysisResult, IncidentFamily, IncidentType, RiskLevel, Sev
 load_dotenv()
 
 SYSTEM_PROMPT = """
-Eres un sistema de analisis de seguridad para camaras municipales.
-Analiza el frame y responde con una clasificacion estructurada, conservadora y explicable.
-No inventes hechos no visibles.
-Usa el esquema para:
-- incident_family: categoria amplia del evento
-- scenario_label: etiqueta corta y flexible definida por ti, por ejemplo DOG_OFF_LEASH, CROWD_GROWING, SUSPECTED_ROBBERY, PERSON_COLLAPSED
-- risk_level: GREEN, YELLOW o RED segun el riesgo para las personas visibles y para la comunidad
-- dispatch_target: area municipal sugerida, por ejemplo POLICIA_MUNICIPAL, TRANSITO, PROTECCION_CIVIL, CONTROL_ANIMAL, SERVICIOS_MEDICOS, MONITOREO
+You are a municipal public-safety video analysis system.
+Analyze the frame and answer with a structured, conservative, and explainable classification.
+Do not invent facts that are not visibly supported by the image.
+Return all free-text fields in English:
+- description
+- recommended_action
+- people_risk_summary
+- community_risk_summary
+- observed_signals
+- trigger_reason
+- narrator_caption
 
-Guia de riesgo:
-- GREEN: observacion preventiva, bajo riesgo o sin daño inminente
-- YELLOW: riesgo moderado o situacion que requiere revision/intervencion preventiva
-- RED: riesgo alto, violencia, posible lesion, peligro inminente o amenaza seria a la comunidad
+Use the schema as follows:
+- incident_family: broad category of the event
+- scenario_label: short flexible label defined by you, for example DOG_OFF_LEASH, CROWD_GROWING, SUSPECTED_ROBBERY, PERSON_COLLAPSED
+- risk_level: GREEN, YELLOW, or RED according to the risk to visible people and the surrounding community
+- dispatch_target: suggested municipal area, for example POLICE, TRAFFIC, CIVIL_PROTECTION, ANIMAL_CONTROL, EMS, MONITORING
+
+Risk guide:
+- GREEN: preventive observation, low risk, or no imminent harm
+- YELLOW: moderate risk or a situation that requires review or preventive intervention
+- RED: high risk, violence, possible injury, imminent danger, or serious threat to the community
 """
 
 VIDEO_PROMPT = """
-Analiza este video municipal y responde con el mismo esquema estructurado.
-Usa el contexto temporal del video, no solo una imagen aislada.
-Si detectas un evento relevante, apóyate en la secuencia y menciona señales visuales clave del momento más importante.
-Si el evento ocurre rápido, prioriza el instante de mayor riesgo.
+Analyze this municipal video and respond with the same structured schema.
+Use the temporal context of the video, not just an isolated image.
+If you detect a relevant event, rely on the sequence and mention the key visual signals from the most important moment.
+If the event happens quickly, prioritize the highest-risk instant.
+Return all free-text fields in English.
 """
 
 
@@ -280,40 +290,40 @@ def normalize_dispatch_target(dispatch_target: str, incident_family: IncidentFam
     if normalized:
         return normalized
     if incident_family in {IncidentFamily.PUBLIC_SAFETY, IncidentFamily.SECURITY}:
-        return "POLICIA_MUNICIPAL"
+        return "POLICE"
     if incident_family == IncidentFamily.MEDICAL:
-        return "SERVICIOS_MEDICOS"
+        return "EMS"
     if incident_family == IncidentFamily.TRAFFIC:
-        return "TRANSITO"
+        return "TRAFFIC"
     if incident_family == IncidentFamily.ANIMAL:
-        return "CONTROL_ANIMAL"
+        return "ANIMAL_CONTROL"
     if incident_family == IncidentFamily.CROWD:
-        return "PROTECCION_CIVIL"
-    return "MONITOREO"
+        return "CIVIL_PROTECTION"
+    return "MONITORING"
 
 
 def normalize_recommended_action(incident_family: IncidentFamily, dispatch_target: str, current_action: str) -> str:
     if incident_family in {IncidentFamily.PUBLIC_SAFETY, IncidentFamily.SECURITY} and "ROBB" in dispatch_target:
-        return "Despachar policia municipal y mantener seguimiento en vivo del evento."
+        return "Dispatch municipal police and maintain live monitoring of the event."
     if incident_family == IncidentFamily.PUBLIC_SAFETY:
-        return "Despachar policia municipal y mantener seguimiento en vivo del evento."
+        return "Dispatch municipal police and maintain live monitoring of the event."
     if incident_family == IncidentFamily.SECURITY:
-        return "Enviar patrulla de proximidad y documentar la agresion para intervencion inmediata."
+        return "Send a patrol unit and document the aggression for immediate intervention."
     if incident_family == IncidentFamily.MEDICAL:
-        return "Enviar apoyo medico y unidad de proximidad para verificar el estado de la persona."
+        return "Send medical support and a patrol unit to verify the person's condition."
     if incident_family == IncidentFamily.TRAFFIC:
-        return "Avisar a transito o inspeccion municipal para retiro o contencion del vehiculo."
+        return "Notify traffic enforcement or municipal inspection for vehicle removal or containment."
     if incident_family == IncidentFamily.CROWD:
-        return "Activar monitoreo preventivo y valorar apoyo de proteccion civil segun densidad y comportamiento."
+        return "Activate preventive monitoring and evaluate civil protection support based on crowd density and behavior."
     if incident_family == IncidentFamily.ANIMAL:
-        return "Avisar a control animal o a la perrera municipal para retiro seguro del animal."
-    return current_action or f"Canalizar el evento hacia {dispatch_target} y continuar monitoreo."
+        return "Notify animal control for the safe removal of the animal."
+    return current_action or f"Route the event to {dispatch_target} and continue monitoring."
 
 
 def merge_risk_context(trigger_reason: str, people_risk_summary: str, community_risk_summary: str) -> str:
     parts = [trigger_reason.strip()]
     if people_risk_summary.strip():
-        parts.append(f"Riesgo personas: {people_risk_summary.strip()}")
+        parts.append(f"People risk: {people_risk_summary.strip()}")
     if community_risk_summary.strip():
-        parts.append(f"Riesgo comunidad: {community_risk_summary.strip()}")
+        parts.append(f"Community risk: {community_risk_summary.strip()}")
     return " | ".join(part for part in parts if part)

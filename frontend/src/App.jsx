@@ -296,6 +296,25 @@ function App() {
     return "risk-green";
   }
 
+  function dispatchLabel(value) {
+    const normalized = String(value || "").toUpperCase();
+    const map = {
+      MONITORING: language === "es" ? "Monitoreo" : "Monitoring",
+      MONITOREO: language === "es" ? "Monitoreo" : "Monitoring",
+      POLICE: language === "es" ? "Policía" : "Police",
+      POLICIA_MUNICIPAL: language === "es" ? "Policía Municipal" : "Municipal Police",
+      TRAFFIC: language === "es" ? "Tránsito" : "Traffic",
+      TRANSITO: language === "es" ? "Tránsito" : "Traffic",
+      CIVIL_PROTECTION: language === "es" ? "Protección Civil" : "Civil Protection",
+      PROTECCION_CIVIL: language === "es" ? "Protección Civil" : "Civil Protection",
+      ANIMAL_CONTROL: language === "es" ? "Control Animal" : "Animal Control",
+      CONTROL_ANIMAL: language === "es" ? "Control Animal" : "Animal Control",
+      EMS: language === "es" ? "Servicios Médicos" : "EMS",
+      SERVICIOS_MEDICOS: language === "es" ? "Servicios Médicos" : "EMS",
+    };
+    return map[normalized] || value || "--";
+  }
+
   async function getSharedLocation() {
     if (!("geolocation" in navigator)) {
       return null;
@@ -807,7 +826,7 @@ function App() {
             </div>
             <div>
               <span>{t("dispatch")}</span>
-              <strong>{latestAnalysis?.dispatch_target || "--"}</strong>
+              <strong>{dispatchLabel(latestAnalysis?.dispatch_target)}</strong>
             </div>
             <div>
               <span>{t("inputTokens")}</span>
@@ -894,7 +913,7 @@ function App() {
             <span>{t("recommendedAction")}</span>
             <strong>{latestAnalysis?.recommended_action || latestAlert?.recommended_action || (language === "es" ? "Continuar monitoreo." : "Continue monitoring.")}</strong>
             <p className="helper-copy">
-              {latestAnalysis?.dispatch_target || latestAlert?.dispatch_target || "MONITOREO"} · {latestAnalysis?.incident_family || latestAlert?.incident_family || "NORMAL"}
+              {dispatchLabel(latestAnalysis?.dispatch_target || latestAlert?.dispatch_target || "MONITORING")} · {latestAnalysis?.incident_family || latestAlert?.incident_family || "NORMAL"}
             </p>
           </div>
           <div>
@@ -1109,7 +1128,7 @@ function App() {
                             <span>{item.detection_basis}</span>
                             <span>{item.ai_mode}</span>
                             <span>{item.incident_family || "NORMAL"}</span>
-                            <span>{item.dispatch_target || "MONITOREO"}</span>
+                            <span>{dispatchLabel(item.dispatch_target || "MONITORING")}</span>
                             <span>{item.risk_level || "GREEN"}</span>
                           </div>
                           {item.trigger_reason ? <div className="narrative-reason">{item.trigger_reason}</div> : null}
