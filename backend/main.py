@@ -529,7 +529,11 @@ async def run_mock_pipeline(session_id: UUID) -> None:
             )
             continue
         try:
-            current_analysis = await asyncio.to_thread(analyze_frame_b64, live_frame)
+            current_analysis = await asyncio.to_thread(
+                analyze_frame_b64,
+                live_frame,
+                session.request.ui_language,
+            )
             await store.register_gemini_call(
                 session_id,
                 input_tokens=current_analysis.input_tokens,
@@ -711,7 +715,11 @@ async def run_video_file_pipeline(session_id: UUID) -> None:
     )
 
     try:
-        analysis = await asyncio.to_thread(analyze_video_file, local_path)
+        analysis = await asyncio.to_thread(
+            analyze_video_file,
+            local_path,
+            session.request.ui_language,
+        )
         await store.register_gemini_call(
             session_id,
             input_tokens=analysis.input_tokens,
@@ -873,7 +881,12 @@ async def import_source(payload: dict) -> dict:
 
 @app.post("/live/frame")
 async def ingest_live_frame(payload: LiveFrameRequest) -> dict:
-    await store.update_live_frame(payload.camera_label, payload.frame_b64, payload.device_location)
+    await store.update_live_frame(
+        payload.camera_label,
+        payload.frame_b64,
+        payload.device_location,
+        payload.ui_language,
+    )
     return {"status": "accepted", "camera_label": payload.camera_label}
 
 

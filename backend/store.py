@@ -89,7 +89,13 @@ class InMemoryStore:
                     return incident
         return None
 
-    async def update_live_frame(self, camera_label: str, frame_b64: str, device_location: object | None = None) -> None:
+    async def update_live_frame(
+        self,
+        camera_label: str,
+        frame_b64: str,
+        device_location: object | None = None,
+        ui_language: str | None = None,
+    ) -> None:
         async with self._lock:
             self.live_frames[camera_label] = frame_b64
             if device_location is not None:
@@ -97,6 +103,10 @@ class InMemoryStore:
                     if session.request.camera_label == camera_label:
                         session.device_location = device_location
                         session.request.device_location = device_location
+            if ui_language is not None:
+                for session in self.sessions.values():
+                    if session.request.camera_label == camera_label:
+                        session.request.ui_language = ui_language
 
     async def get_live_frame(self, camera_label: str) -> str | None:
         async with self._lock:

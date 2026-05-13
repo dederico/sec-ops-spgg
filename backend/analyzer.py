@@ -17,7 +17,7 @@ from .models import AnalysisResult, IncidentFamily, IncidentType, RiskLevel, Sev
 
 load_dotenv()
 
-SYSTEM_PROMPT = """
+SYSTEM_PROMPT_EN = """
 You are a municipal public-safety video analysis system.
 Analyze the frame and answer with a structured, conservative, and explainable classification.
 Do not invent facts that are not visibly supported by the image.
@@ -42,12 +42,45 @@ Risk guide:
 - RED: high risk, violence, possible injury, imminent danger, or serious threat to the community
 """
 
-VIDEO_PROMPT = """
+VIDEO_PROMPT_EN = """
 Analyze this municipal video and respond with the same structured schema.
 Use the temporal context of the video, not just an isolated image.
 If you detect a relevant event, rely on the sequence and mention the key visual signals from the most important moment.
 If the event happens quickly, prioritize the highest-risk instant.
 Return all free-text fields in English.
+"""
+
+SYSTEM_PROMPT_ES = """
+Eres un sistema municipal de analisis de video para seguridad publica.
+Analiza el frame y responde con una clasificacion estructurada, conservadora y explicable.
+No inventes hechos que no esten visiblemente respaldados por la imagen.
+Devuelve todos los campos de texto libre en espanol:
+- description
+- recommended_action
+- people_risk_summary
+- community_risk_summary
+- observed_signals
+- trigger_reason
+- narrator_caption
+
+Usa el esquema asi:
+- incident_family: categoria amplia del evento
+- scenario_label: etiqueta corta y flexible definida por ti, por ejemplo DOG_OFF_LEASH, CROWD_GROWING, SUSPECTED_ROBBERY, PERSON_COLLAPSED
+- risk_level: GREEN, YELLOW o RED segun el riesgo para las personas visibles y para la comunidad
+- dispatch_target: area municipal sugerida, por ejemplo POLICE, TRAFFIC, CIVIL_PROTECTION, ANIMAL_CONTROL, EMS, MONITORING
+
+Guia de riesgo:
+- GREEN: observacion preventiva, bajo riesgo o sin dano inminente
+- YELLOW: riesgo moderado o situacion que requiere revision o intervencion preventiva
+- RED: riesgo alto, violencia, posible lesion, peligro inminente o amenaza seria para la comunidad
+"""
+
+VIDEO_PROMPT_ES = """
+Analiza este video municipal y responde con el mismo esquema estructurado.
+Usa el contexto temporal del video, no solo una imagen aislada.
+Si detectas un evento relevante, apoyate en la secuencia y menciona las senales visuales clave del momento mas importante.
+Si el evento ocurre rapido, prioriza el instante de mayor riesgo.
+Devuelve todos los campos de texto libre en espanol.
 """
 
 
@@ -98,18 +131,25 @@ def can_use_real_ai() -> bool:
     return config.enabled and config.api_key_present
 
 
-def analyze_frame_b64(frame_b64: str) -> AnalysisResult:
+def prompts_for_language(language: str | None) -> tuple[str, str]:
+    if (language or "en").lower() == "es":
+        return SYSTEM_PROMPT_ES, VIDEO_PROMPT_ES
+    return SYSTEM_PROMPT_EN, VIDEO_PROMPT_EN
+
+
+def analyze_frame_b64(frame_b64: str, language: str = "en") -> AnalysisResult:
     config = get_analyzer_config()
     if not (config.enabled and config.api_key_present):
         raise RuntimeError("Real AI is not enabled or GEMINI_API_KEY is missing")
 
     image_bytes, mime_type = decode_data_url(frame_b64)
     client = genai.Client()
+    system_prompt, _ = prompts_for_language(language)
     response = client.models.generate_content(
         model=config.model,
         contents=[
             types.Part.from_bytes(data=image_bytes, mime_type=mime_type),
-            SYSTEM_PROMPT,
+            system_prompt,
         ],
         config={
             "response_mime_type": "application/json",
@@ -122,10 +162,16 @@ def analyze_frame_b64(frame_b64: str) -> AnalysisResult:
     input_tokens = int(getattr(usage, "prompt_token_count", 0) or 0)
     output_tokens = int(getattr(usage, "candidates_token_count", 0) or 0)
     total_tokens = int(getattr(usage, "total_token_count", 0) or 0)
-    return normalize_result(payload, input_tokens=input_tokens, output_tokens=output_tokens, total_tokens=total_tokens)
+    return normalize_result(
+        payload,
+        input_tokens=input_tokens,
+        output_tokens=output_tokens,
+        total_tokens=total_tokens,
+        language=language,
+    )
 
 
-def analyze_video_file(video_path: str | Path) -> AnalysisResult:
+def analyze_video_file(video_path: str | Path, language: str = "en") -> AnalysisResult:
     config = get_analyzer_config()
     if not (config.enabled and config.api_key_present):
         raise RuntimeError("Real AI is not enabled or GEMINI_API_KEY is missing")
@@ -137,6 +183,7 @@ def analyze_video_file(video_path: str | Path) -> AnalysisResult:
     client = genai.Client()
     uploaded = client.files.upload(file=path, config={"mime_type": guess_video_mime_type(path)})
     uploaded = wait_until_file_ready(client, uploaded.name)
+    _, video_prompt = prompts_for_language(language)
 
     response = client.models.generate_content(
         model=config.model,
@@ -148,7 +195,7 @@ def analyze_video_file(video_path: str | Path) -> AnalysisResult:
                 ),
                 video_metadata=types.VideoMetadata(fps=config.video_fps),
             ),
-            VIDEO_PROMPT,
+            video_prompt,
         ],
         config=types.GenerateContentConfig(
             response_mime_type="application/json",
@@ -161,7 +208,13 @@ def analyze_video_file(video_path: str | Path) -> AnalysisResult:
     input_tokens = int(getattr(usage, "prompt_token_count", 0) or 0)
     output_tokens = int(getattr(usage, "candidates_token_count", 0) or 0)
     total_tokens = int(getattr(usage, "total_token_count", 0) or 0)
-    return normalize_result(payload, input_tokens=input_tokens, output_tokens=output_tokens, total_tokens=total_tokens)
+    return normalize_result(
+        payload,
+        input_tokens=input_tokens,
+        output_tokens=output_tokens,
+        total_tokens=total_tokens,
+        language=language,
+    )
 
 
 def wait_until_file_ready(client: genai.Client, file_name: str, timeout_seconds: int = 120) -> types.File:
@@ -211,7 +264,13 @@ def parse_json_payload(text: str) -> dict:
     return json.loads(cleaned[start : end + 1])
 
 
-def normalize_result(payload: dict, input_tokens: int = 0, output_tokens: int = 0, total_tokens: int = 0) -> AnalysisResult:
+def normalize_result(
+    payload: dict,
+    input_tokens: int = 0,
+    output_tokens: int = 0,
+    total_tokens: int = 0,
+    language: str = "en",
+) -> AnalysisResult:
     validated = StructuredAnalysisPayload.model_validate(payload)
 
     severity = validated.severity if validated.severity in Severity.__members__ else "LOW"
@@ -238,6 +297,7 @@ def normalize_result(payload: dict, input_tokens: int = 0, output_tokens: int = 
         incident_family,
         dispatch_target,
         validated.recommended_action,
+        language=language,
     )
 
     return AnalysisResult(
@@ -253,7 +313,12 @@ def normalize_result(payload: dict, input_tokens: int = 0, output_tokens: int = 
         subjects_count=max(int(validated.subjects_count or 0), 0),
         bbox=validated.bbox.model_dump() if validated.bbox else None,
         observed_signals=[str(item) for item in validated.observed_signals][:6],
-        trigger_reason=merge_risk_context(validated.trigger_reason, validated.people_risk_summary, validated.community_risk_summary),
+        trigger_reason=merge_risk_context(
+            validated.trigger_reason,
+            validated.people_risk_summary,
+            validated.community_risk_summary,
+            language=language,
+        ),
         narrator_caption=validated.narrator_caption or validated.description,
         risk_level=risk_level,
         input_tokens=input_tokens,
@@ -302,28 +367,31 @@ def normalize_dispatch_target(dispatch_target: str, incident_family: IncidentFam
     return "MONITORING"
 
 
-def normalize_recommended_action(incident_family: IncidentFamily, dispatch_target: str, current_action: str) -> str:
+def normalize_recommended_action(incident_family: IncidentFamily, dispatch_target: str, current_action: str, language: str = "en") -> str:
+    is_spanish = language.lower() == "es"
     if incident_family in {IncidentFamily.PUBLIC_SAFETY, IncidentFamily.SECURITY} and "ROBB" in dispatch_target:
-        return "Dispatch municipal police and maintain live monitoring of the event."
+        return "Despachar policia municipal y mantener seguimiento en vivo del evento." if is_spanish else "Dispatch municipal police and maintain live monitoring of the event."
     if incident_family == IncidentFamily.PUBLIC_SAFETY:
-        return "Dispatch municipal police and maintain live monitoring of the event."
+        return "Despachar policia municipal y mantener seguimiento en vivo del evento." if is_spanish else "Dispatch municipal police and maintain live monitoring of the event."
     if incident_family == IncidentFamily.SECURITY:
-        return "Send a patrol unit and document the aggression for immediate intervention."
+        return "Enviar patrulla de proximidad y documentar la agresion para intervencion inmediata." if is_spanish else "Send a patrol unit and document the aggression for immediate intervention."
     if incident_family == IncidentFamily.MEDICAL:
-        return "Send medical support and a patrol unit to verify the person's condition."
+        return "Enviar apoyo medico y unidad de proximidad para verificar el estado de la persona." if is_spanish else "Send medical support and a patrol unit to verify the person's condition."
     if incident_family == IncidentFamily.TRAFFIC:
-        return "Notify traffic enforcement or municipal inspection for vehicle removal or containment."
+        return "Avisar a transito o inspeccion municipal para retiro o contencion del vehiculo." if is_spanish else "Notify traffic enforcement or municipal inspection for vehicle removal or containment."
     if incident_family == IncidentFamily.CROWD:
-        return "Activate preventive monitoring and evaluate civil protection support based on crowd density and behavior."
+        return "Activar monitoreo preventivo y valorar apoyo de proteccion civil segun densidad y comportamiento." if is_spanish else "Activate preventive monitoring and evaluate civil protection support based on crowd density and behavior."
     if incident_family == IncidentFamily.ANIMAL:
-        return "Notify animal control for the safe removal of the animal."
-    return current_action or f"Route the event to {dispatch_target} and continue monitoring."
+        return "Avisar a control animal o a la perrera municipal para retiro seguro del animal." if is_spanish else "Notify animal control for the safe removal of the animal."
+    return current_action or (f"Canalizar el evento hacia {dispatch_target} y continuar monitoreo." if is_spanish else f"Route the event to {dispatch_target} and continue monitoring.")
 
 
-def merge_risk_context(trigger_reason: str, people_risk_summary: str, community_risk_summary: str) -> str:
+def merge_risk_context(trigger_reason: str, people_risk_summary: str, community_risk_summary: str, language: str = "en") -> str:
     parts = [trigger_reason.strip()]
     if people_risk_summary.strip():
-        parts.append(f"People risk: {people_risk_summary.strip()}")
+        prefix = "Riesgo personas" if language.lower() == "es" else "People risk"
+        parts.append(f"{prefix}: {people_risk_summary.strip()}")
     if community_risk_summary.strip():
-        parts.append(f"Community risk: {community_risk_summary.strip()}")
+        prefix = "Riesgo comunidad" if language.lower() == "es" else "Community risk"
+        parts.append(f"{prefix}: {community_risk_summary.strip()}")
     return " | ".join(part for part in parts if part)

@@ -498,7 +498,7 @@ function App() {
     const response = await fetch(`${API_URL}/sessions/start`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ ...payload, ui_language: language }),
     });
     const data = await response.json();
     setActiveSessionId(data.session_id);
@@ -569,7 +569,12 @@ function App() {
     await fetch(`${API_URL}/live/frame`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ camera_label: cameraLabel, frame_b64, device_location: deviceLocationRef.current }),
+      body: JSON.stringify({
+        camera_label: cameraLabel,
+        frame_b64,
+        device_location: deviceLocationRef.current,
+        ui_language: language,
+      }),
     });
   }
 
@@ -664,7 +669,7 @@ function App() {
     await fetch(`${API_URL}/live/frame`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ camera_label: cameraLabel, frame_b64 }),
+      body: JSON.stringify({ camera_label: cameraLabel, frame_b64, ui_language: language }),
     });
   }
 

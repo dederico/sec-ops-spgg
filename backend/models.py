@@ -112,12 +112,14 @@ class SessionStartRequest(BaseModel):
     camera_label: str
     frame_sample_rate: float = Field(default=1.0, gt=0.0)
     device_location: DeviceLocation | None = None
+    ui_language: Literal["en", "es"] = "en"
 
 
 class LiveFrameRequest(BaseModel):
     camera_label: str
     frame_b64: str
     device_location: DeviceLocation | None = None
+    ui_language: Literal["en", "es"] | None = None
 
 
 class SessionResponse(BaseModel):
